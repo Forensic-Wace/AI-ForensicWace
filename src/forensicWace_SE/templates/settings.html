@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+    <title>Forensic Wace</title>
+    <link rel="stylesheet" href="../assets/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i&amp;display=swap">
+    <link rel="stylesheet" href="../assets/fonts/fontawesome-all.min.css">
+    <link rel="stylesheet" href="../assets/css/--mp---Masonry-Gallery-with-Loader-styles.css">
+    <link rel="stylesheet" href="../assets/css/Features-Cards-icons.css">
+    <link rel="stylesheet" href="../assets/css/Forensic_WACE.css">
+    <link rel="stylesheet" href="../assets/css/index.css">
+</head>
+
+<body style="background: #f8f9fc;">
+    {% include "navbar.html" %}
+    <hr style="margin-top: 7px;margin-bottom: 13px;">
+    <div id="wrapper">
+        <div class="container-fluid">
+            {% if saveSucceded %}
+                <div class="row">
+                    <div class="col text-center">
+                        <div class="alert alert-success alert-dismissible mx-auto" role="alert" style="width: 90%;"><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button><a class="btn btn-success btn-circle ms-1" role="button" style="padding-bottom: 0px;padding-top: 0px;margin-right: 15px;border-style: none;"><i class="fas fa-check text-white"></i></a><span style="font-size: 24px;"><strong>{{ saveMessage }}</strong><br></span></div>
+                    </div>
+                </div>
+            {% endif %}
+            {% if errorOccurred %}
+                <div class="row">
+                    <div class="col text-center">
+                        <div class="alert alert-danger alert-dismissible mx-auto" role="alert" style="width: 90%;"><button class="btn-close" type="button" aria-label="Close" data-bs-dismiss="alert"></button><a class="btn btn-danger btn-circle ms-1" role="button" style="margin-right: 15px;padding-top: 0px;padding-bottom: 0px;"><i class="fas fa-times text-white"></i></a><span style="font-size: 24px;"><strong>{{ errorMessage }}</strong><br /></span></div>
+                    </div>
+                </div>
+            {% endif %}
+            <div class="row mb-3">
+                <div class="col-auto col-xl-4">
+                    <div class="card shadow mb-3">
+                        <div class="card-header border rounded py-3">
+                            <p class="text-primary m-0 fw-bold"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 16 16" class="bi bi-image-fill fs-5">
+                                    <path d="M.002 3a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-12a2 2 0 0 1-2-2V3zm1 9v1a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5l-3.777-1.947a.5.5 0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002 12zm5-6.5a1.5 1.5 0 1 0-3 0 1.5 1.5 0 0 0 3 0"></path>
+                                </svg>&nbsp;Platform Logo</p>
+                        </div>
+                        <div class="card-body">
+                            <img class="img-fluid mb-3 mt-4" src="../assets/img/Logo.png"">
+                            <div class="text-center">
+                                <p class="mb-4">Upload the new logo using the following input field.<br></p>
+                            </div>
+                            <form class="user" action="/ChangeLogo" method="post" enctype="multipart/form-data">
+                                <div class="mb-3">
+                                    <input class="form-control" type="file" name="file" style="border-radius: 160px;" required>
+                                </div>
+                                <div class="text-center mb-3">
+                                    <button class="btn btn-primary border rounded-pill btn-icon-split" type="submit" value="Upload">
+                                        <span class="text-white-50 icon"><i class="fas fa-file-upload"></i></span>
+                                        <span class="text-white text">UPLOAD LOGO</span>
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="card shadow mb-3">
+                        <div class="card-header border rounded py-3">
+                            <p class="text-primary m-0 fw-bold"><svg class="bi bi-cash-coin fs-5" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 16 16">
+                                    <path fill-rule="evenodd" d="M11 15a4 4 0 1 0 0-8 4 4 0 0 0 0 8m5-4a5 5 0 1 1-10 0 5 5 0 0 1 10 0"></path>
+                                    <path d="M9.438 11.944c.047.596.518 1.06 1.363 1.116v.44h.375v-.443c.875-.061 1.386-.529 1.386-1.207 0-.618-.39-.936-1.09-1.1l-.296-.07v-1.2c.376.043.614.248.671.532h.658c-.047-.575-.54-1.024-1.329-1.073V8.5h-.375v.45c-.747.073-1.255.522-1.255 1.158 0 .562.378.92 1.007 1.066l.248.061v1.272c-.384-.058-.639-.27-.696-.563h-.668zm1.36-1.354c-.369-.085-.569-.26-.569-.522 0-.294.216-.514.572-.578v1.1h-.003zm.432.746c.449.104.655.272.655.569 0 .339-.257.571-.709.614v-1.195l.054.012z"></path>
+                                    <path d="M1 0a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h4.083c.058-.344.145-.678.258-1H3a2 2 0 0 0-2-2V3a2 2 0 0 0 2-2h10a2 2 0 0 0 2 2v3.528c.38.34.717.728 1 1.154V1a1 1 0 0 0-1-1z"></path>
+                                    <path d="M9.998 5.083 10 5a2 2 0 1 0-3.132 1.65 5.982 5.982 0 0 1 3.13-1.567z"></path>
+                                </svg> Pay to use analyzers</p>
+                        </div>
+                        <div class="card shadow">
+                            <div class="card-body">
+                                <form action="/SavePay2UseAnalyzerSettings" method="post">
+                                    <div id="dataTable-1" class="table-responsive mt-2 table" role="grid" aria-describedby="dataTable_info">
+                                        <table id="dataTable" class="table my-0">
+                                            <thead>
+                                                <tr>
+                                                    <th>Analyzer</th>
+                                                    <th>Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td>Microsoft Azure OCR &amp; Caption</td>
+                                                    <td>
+                                                        {% if configIniFile['Pay2UseAnalyzers'] != null and configIniFile['Pay2UseAnalyzers']['msazureocrandcaption'] == 'on' %}
+                                                            <div class="form-check"><input id="MsAzureOcrAndCaption" name="MsAzureOcrAndCaption" class="form-check-input" type="checkbox" checked/><label class="form-check-label" for="MsAzureOcrAndCaption">Use Azure Service</label></div>
+                                                        {% else %}
+                                                            <div class="form-check"><input id="MsAzureOcrAndCaption" name="MsAzureOcrAndCaption" class="form-check-input" type="checkbox"/><label class="form-check-label" for="MsAzureOcrAndCaption">Use Azure Service</label></div>
+                                                        {% endif %}
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Microsoft Azure S2T</td>
+                                                    <td>
+                                                        {% if configIniFile['Pay2UseAnalyzers'] != null and configIniFile['Pay2UseAnalyzers']['mss2t'] == 'on' %}
+                                                            <div class="form-check"><input id="MsS2T" name = "MsS2T" class="form-check-input" type="checkbox" checked/><label class="form-check-label" for="MsS2T">Use Azure Service</label></div>
+                                                        {% else %}
+                                                            <div class="form-check"><input id="MsS2T" name = "MsS2T" class="form-check-input" type="checkbox"/><label class="form-check-label" for="MsS2T">Use Azure Service</label></div>
+                                                        {% endif %}
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Microsoft PII</td>
+                                                    <td>
+                                                        {% if configIniFile['Pay2UseAnalyzers'] != null and configIniFile['Pay2UseAnalyzers']['mspii'] == 'on' %}
+                                                            <div class="form-check"><input id="MsPii" name="MsPii" class="form-check-input" type="checkbox" checked/><label class="form-check-label" for="MsPii">Use Azure Service</label></div>
+                                                        {% else %}
+                                                            <div class="form-check"><input id="MsPii" name="MsPii" class="form-check-input" type="checkbox"/><label class="form-check-label" for="MsPii">Use Azure Service</label></div>
+                                                        {% endif %}
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td>OpenAI GPT</td>
+                                                    <td>
+                                                        {% if configIniFile['Pay2UseAnalyzers'] != null and configIniFile['Pay2UseAnalyzers']['openaigpt'] == 'on' %}
+                                                            <div class="form-check"><input id="OpenAiGpt" name="OpenAiGpt" class="form-check-input" type="checkbox" checked/><label class="form-check-label" for="OpenAiGpt">Use OpenAI Service</label></div>
+                                                        {% else %}
+                                                            <div class="form-check"><input id="OpenAiGpt" name="OpenAiGpt" class="form-check-input" type="checkbox"/><label class="form-check-label" for="OpenAiGpt">Use OpenAI Service</label></div>
+                                                        {% endif %}
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                            <tfoot>
+                                                <tr>
+                                                    <td><strong><strong>Analyzer</strong></strong></td>
+                                                    <td><strong>Status</strong></td>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+                                    <div class="text-center mb-3">
+                                        <button class="btn btn-primary border rounded-pill btn-icon-split" type="submit" value="Upload">
+                                                <span class="text-white-50 icon"><i class="fas fa-save"></i></span>
+                                                <span class="text-white text">SAVE</span>
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card shadow mb-3">
+                        <div class="card-header border rounded py-3">
+                            <p class="text-primary m-0 fw-bold"><svg class="bi bi-info-circle-fill fs-5" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m.93-9.412-1 4.705c-.07.34.029.533.304.533.194 0 .487-.07.686-.246l-.088.416c-.287.346-.92.598-1.465.598-.703 0-1.002-.422-.808-1.319l.738-3.468c.064-.293.006-.399-.287-.47l-.451-.081.082-.381 2.29-.287zM8 5.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2"></path>
+                            </svg> Analyzer status</p>
+                        </div>
+                        <div class="card shadow">
+                            <div class="card-body">
+                                <div id="dataTable-1" class="table-responsive mt-2 table" role="grid" aria-describedby="dataTable_info">
+                                    <table id="dataTable" class="table my-0">
+                                        <thead>
+                                            <tr>
+                                                <th>Analyzer</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for analyzerStatus in analyzerStatuses %}
+                                            <tr>
+                                                <td>{{ analyzerStatus[1] }}</td>
+                                                {% if analyzerStatus[0] == true %}
+                                                    <td><i class="far fa-check-circle" style="font-size: 23px;color: var(--bs-success);"></i></td>
+                                                {% else %}
+                                                    <td><i class="far fa-times-circle" style="font-size: 23px;color: var(--bs-danger);"></i></td>
+                                                    <td>{{ analyzerStatus[2] }}</td>
+                                                {% endif %}
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                        <tfoot>
+                                            <tr>
+                                                <td><strong><strong>Analyzer</strong></strong></td>
+                                                <td><strong>Status</strong></td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="card h-100 shadow mb-3">
+                        <div class="card-header border rounded py-3">
+                            <p class="text-primary m-0 fw-bold"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 16 16" class="bi bi-filetype-key fs-5">
+                                    <path fill-rule="evenodd" d="M14 4.5V14a2 2 0 0 1-2 2h-1v-1h1a1 1 0 0 0 1-1V4.5h-2A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v9H2V2a2 2 0 0 1 2-2h5.5zM3.21 11.85h-.87L.83 13.64H.79v-1.79H0v3.999h.791v-1.283l.41-.466 1.12 1.749h.951l-1.488-2.276 1.427-1.723Zm2.903 3.352h-1.79v-1.073h1.685v-.606H4.323v-1.025h1.79v-.648H3.538v3.999h2.575v-.647Zm2.243-.888v1.535h-.794v-1.52L6.223 11.85H7.1l.853 1.696h.032l.855-1.696h.856l-1.339 2.464Z"></path>
+                                </svg>&nbsp;API Settings</p>
+                        </div>
+                        <div class="card-body">
+                            <form action="/SaveAPISettings" method="post">
+                                <div class="mb-3"><label class="form-label" for="databaseUrl"><strong>Database URL</strong></label><input class="border rounded-pill form-control" type="text" id="databaseUrl" placeholder="Insert database URL" name="databaseUrl" value="{{ configIniFile['API']['databaseurl']}}"></div>
+                                <div class="mb-3"><label class="form-label" for="hfToken"><strong>HF token</strong></label><input class="border rounded-pill form-control" type="text" id="hfToken" placeholder="Insert HF Token" name="hfToken" value="{{ configIniFile['API']['hftoken']}}"></div>
+                                <div class="mb-3"><label class="form-label" for="deepPassEndpoint"><strong>Deep pass endpoint</strong></label><input class="border rounded-pill form-control" type="text" id="deepPassEndpoint" placeholder="Insert Deep Pass Endpoint" name="deepPassEndpoint" value="{{ configIniFile['API']['deeppassendpoint']}}"></div>
+                                <div class="mb-3"><label class="form-label" for="deepPassEndpoint"><strong>OCR Tesseract endpoint</strong></label><input class="border rounded-pill form-control" type="text" id="ocrTesseractEndpoint" placeholder="Insert OCR Tesseract Endpoint" name="ocrTesseractEndpoint" value="{{ configIniFile['API']['ocrtesseractendpoint']}}"></div>
+                                <div class="mb-3"><label class="form-label" for="deepPassEndpoint"><strong>Image Caption Lavis endpoint</strong></label><input class="border rounded-pill form-control" type="text" id="imageCaptionLavisEndpoint" placeholder="Insert Image Caption Lavis Endpoint" name="imageCaptionLavisEndpoint" value="{{ configIniFile['API']['imagecaptionlavisendpoint']}}"></div>
+                                <div class="mb-3"><label class="form-label" for="deepPassEndpoint"><strong>Audio S2T Whisper Aser endpoint</strong></label><input class="border rounded-pill form-control" type="text" id="audioS2TWhisperAserEndpoint" placeholder="Insert Audio S2T Whisper Aser Endpoint" name="audioS2TWhisperAserEndpoint" value="{{ configIniFile['API']['audios2twhisperaserendpoint']}}"></div>
+                                <div class="mb-3"><label class="form-label" for="openaiApiKey"><strong>Openai api key</strong></label><input class="border rounded-pill form-control" type="text" id="openaiApiKey" placeholder="Insert OpenAI API Key" name="openaiApiKey" value="{{ configIniFile['API']['openaiapikey']}}"></div>
+                                <div class="mb-3"><label class="form-label" for="gtpAssistantIdExtract"><strong>Gtp assistant id extract</strong></label><input class="border rounded-pill form-control" type="text" id="gtpAssistantIdExtract" placeholder="Insert GPT Assistant Id Extract" name="gtpAssistantIdExtract" value="{{ configIniFile['API']['gtpassistantidextract']}}"></div>
+                                <div class="mb-3"><label class="form-label" for="msPiiEndpoint"><strong>MS pii endpoint</strong></label><input class="border rounded-pill form-control" type="text" id="msPiiEndpoint" placeholder="Insert MS Pii Endpoint" name="msPiiEndpoint" value="{{ configIniFile['API']['mspiiendpoint']}}"></div>
+                                <div class="mb-3"><label class="form-label" for="msPiiKey"><strong>MS pii key</strong></label><input class="border rounded-pill form-control" type="text" id="msPiiKey" placeholder="Insert MS Pii Key" name="msPiiKey" value="{{ configIniFile['API']['mspiikey']}}"></div>
+                                <div class="mb-3"><label class="form-label" for="msS2tKey"><strong>MS S2t key</strong></label><input class="border rounded-pill form-control" type="text" id="msS2tKey" placeholder="Insert MS2T Key" name="msS2tKey" value="{{ configIniFile['API']['mss2tkey']}}"></div>
+                                <div class="mb-3"><label class="form-label" for="msS2tRegion"><strong>MS S2t region</strong></label><input class="border rounded-pill form-control" type="text" id="msS2tRegion" placeholder="Insert MS2T Region" name="msS2tRegion" value="{{ configIniFile['API']['mss2tregion']}}"></div>
+                                <div class="mb-3"><label class="form-label" for="msS2tLanguage"><strong>MS S2t language</strong></label><input class="border rounded-pill form-control" type="text" id="msS2tLanguage" placeholder="Insert MS2T Language" name="msS2tLanguage" value="{{ configIniFile['API']['mss2tlanguage']}}"></div>
+                                <div class="mb-3"><label class="form-label" for="msCvEndpoint"><strong>MS cv endpoint</strong></label><input class="border rounded-pill form-control" type="text" id="msCvEndpoint" placeholder="Insert MS CV Endpoint" name="msCvEndpoint" value="{{ configIniFile['API']['mscvendpoint']}}"></div>
+                                <div class="mb-3"><label class="form-label" for="msCvKey"><strong>MS cv key</strong></label><input class="border rounded-pill form-control" type="text" id="msCvKey" placeholder="Insert MS CV Key" name="msCvKey" value="{{ configIniFile['API']['mscvkey']}}"></div>
+                                <div class="mb-3"><label class="form-label" for="msCvLanguage"><strong>MS cv language</strong></label><input class="border rounded-pill form-control" type="text" id="msCvLanguage" placeholder=" Insert MS CV Language" name="msCvLanguage" value="{{ configIniFile['API']['mscvlanguage']}}"></div>
+                                <div class="text-center mb-3">
+                                    <button class="btn btn-primary border rounded-pill btn-icon-split" type="submit" value="Upload">
+                                            <span class="text-white-50 icon"><i class="fas fa-save"></i></span>
+                                            <span class="text-white text">SAVE</span>
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% include "footer.html" %}
+    <script src="assets/bootstrap/js/bootstrap.min.js"></script>
+</body>
+
+</html>

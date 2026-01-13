@@ -1,0 +1,59 @@
+recognizers:
+  -
+    name: "Zip code Recognizer"
+    supported_language: "en"
+    patterns:
+      -
+         name: "zip code (weak)"
+         regex: "\\d{5}"
+         score: 0.89
+    context:
+     - zip
+     - code
+    supported_entity: "ZIP"
+  - name: "Bitcoin Recognizer"
+    supported_language: "en"
+    patterns:
+      - name: "Bitcoin address"
+        regex: "([13]|bc1)[A-HJ-NP-Za-km-z1-9]{27,34}"
+        score: 0.95
+    context:
+      - bitcoin
+      - crypto
+    supported_entity: "BITCOINADDRESS"
+  - name: "Ethereum Recognizer"
+    supported_language: "en"
+    patterns:
+      - name: "Ethereum address"
+        regex: "0x[a-fA-F0-9]{40}"
+        score: 0.95
+    context:
+      - ethereum
+      - crypto
+      - smart contract
+    supported_entity: "ETHEREUMADDRESS"
+  - name: "MAC Address Recognizer"
+    supported_language: "en"
+    patterns:
+      - name: "MAC address"
+        regex: "([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})"
+        score: 0.95
+    context:
+      - mac address
+      - networking
+      - nic
+    supported_entity: "MAC_ADDRESS"
+  -
+    name: "Titles recognizer"
+    supported_language: "en"
+    supported_entity: "TITLE"
+    deny_list:
+      - Mr.
+      - Mrs.
+      - Ms.
+      - Miss
+      - Dr.
+      - Prof.
+
+
+

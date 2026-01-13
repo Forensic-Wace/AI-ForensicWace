@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+    <title>Forensic Wace</title>
+    <link rel="stylesheet" href="../assets/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i&amp;display=swap">
+    <link rel="stylesheet" href="../assets/fonts/fontawesome-all.min.css">
+    <link rel="stylesheet" href="../assets/css/--mp---Masonry-Gallery-with-Loader-styles.css">
+    <link rel="stylesheet" href="../assets/css/Features-Cards-icons.css">
+    <link rel="stylesheet" href="../assets/css/Forensic_WACE.css">
+    <link rel="stylesheet" href="../assets/css/index.css">
+    <style>
+        .hidden-row { display: none; }
+    </style>
+    <script>
+        function toggleSubTable(button, tableId) {
+            const row = document.getElementById(tableId);
+            const icon = button.querySelector('span i');
+
+            if (row.classList.contains('hidden-row')) {
+                row.classList.remove('hidden-row');
+                button.childNodes[1].textContent = 'Hide';
+                if(icon) {
+                    icon.classList.remove('fa-caret-down');
+                    icon.classList.add('fa-caret-up');
+                    icon.classList.add('fas');  // se non c'è già, per sicurezza
+                }
+            } else {
+                row.classList.add('hidden-row');
+                button.childNodes[1].textContent = 'Show';
+                if(icon) {
+                    icon.classList.remove('fa-caret-up');
+                    icon.classList.add('fa-caret-down');
+                    icon.classList.add('fas');
+                }
+            }
+        }
+    </script>
+</head>
+
+<body style="background: #f8f9fc;">
+    {% include "navbar.html" %}
+    <hr style="margin-top: 7px;margin-bottom: 13px;">
+    <div id="wrapper">
+        <div class="d-flex flex-column" id="content-wrapper">
+            <div id="content">
+                <div class="container-fluid">
+                    <div class="d-sm-flex justify-content-between align-items-center mb-4">
+                        <h3 class="text-dark mb-0">AI Analysis results</h3>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 col-xl-6 mb-4">
+                            <div class="card shadow border-start-primary py-2">
+                                <div class="card-body">
+                                    <div class="row align-items-center no-gutters">
+                                        <div class="col me-2">
+                                            <div class="text-uppercase text-primary fw-bold text-xs mb-1"><span>Process ID</span></div>
+                                            <div class="text-dark fw-bold h5 mb-0"><span>{{ processId}}</span></div>
+                                        </div>
+                                        <div class="col-auto"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 16 16" class="bi bi-collection-fill fa-2x text-gray-300">
+                                                <path d="M0 13a1.5 1.5 0 0 0 1.5 1.5h13A1.5 1.5 0 0 0 16 13V6a1.5 1.5 0 0 0-1.5-1.5h-13A1.5 1.5 0 0 0 0 6zM2 3a.5.5 0 0 0 .5.5h11a.5.5 0 0 0 0-1h-11A.5.5 0 0 0 2 3m2-2a.5.5 0 0 0 .5.5h7a.5.5 0 0 0 0-1h-7A.5.5 0 0 0 4 1"></path>
+                                            </svg></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-xl-6 mb-4">
+                            <div class="card shadow border-start-primary py-2">
+                                <div class="card-body">
+                                    <div class="row align-items-center no-gutters">
+                                        <div class="col me-2">
+                                            <div class="text-uppercase text-primary fw-bold text-xs mb-1"><span>Number of Messages</span></div>
+                                            <div class="text-dark fw-bold h5 mb-0"><span>{{ numberOfMessages }} Messages</span></div>
+                                        </div>
+                                        <div class="col-auto"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 16 16" class="bi bi-chat-fill fa-2x text-gray-300">
+                                                <path d="M8 15c4.418 0 8-3.134 8-7s-3.582-7-8-7-8 3.134-8 7c0 1.76.743 3.37 1.97 4.6-.097 1.016-.417 2.13-.771 2.966-.079.186.074.394.273.362 2.256-.37 3.597-.938 4.18-1.234A9.06 9.06 0 0 0 8 15"></path>
+                                            </svg></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                            <div class="card shadow">
+                                <div class="card-header py-3">
+                                    <p class="text-primary m-0 fw-bold">Analysis results</p>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive table mt-2" id="dataTable-1" role="grid" aria-describedby="dataTable_info">
+                                        <table class="table my-0" id="dataTable">
+                                            <thead>
+                                                <tr>
+                                                    <th>Messsage Source</th>
+                                                    <th>Message ID</th>
+                                                    <th>Conversation ID</th>
+                                                    <th>Message Type</th>
+                                                    <th>Date and time</th>
+                                                    <th>Media</th>
+                                                    <th>Message</th>
+                                                    <th>PII</th>
+                                                    <th>Password</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+
+                                                {% for text in textList %}
+
+                                                <tr>
+                                                    <td>{{ text.sender }}</td>
+                                                    <td>{{ text.msg_id }}</td>
+                                                    <td>{{ text.id_chat }}</td>
+                                                    <td>{{ text.message_type }}</td>
+                                                    <td>{{ text.date}}</td>
+                                                    <td>
+                                                        {% if text.audio_path is not none %}
+                                                        <a target="_blank" href="{{ str(text.audio_path) }}">
+                                                            <audio controls src="{{ str(text.audio_path) }}"></audio>
+                                                        </a>
+                                                        {% endif %}
+                                                        {% if text.image_path is not none %}
+                                                        <a target="_blank" href="{{ str(text.image_path) }}">
+                                                            <img src="{{ str(text.image_path) }}" style="width: 50%">
+                                                        </a>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>{{ text.text }}</td>
+                                                    {% if text.pii %}
+                                                        <td>
+                                                            <button class="btn btn-info border rounded-pill btn-icon-split" onclick="toggleSubTable(this, 'PII_subtable${{text.msg_id}}')"><span class="text-white-50 icon"><i class="fas fa-caret-down"></i></span><span class="text-white text">Show</span></button>
+                                                        </td>
+                                                    {%endif%}
+
+                                                    {% if text.password %}
+                                                        <td>
+                                                            <button class="btn btn-info border rounded-pill btn-icon-split" onclick="toggleSubTable(this, 'Password_subtable${{text.msg_id}}')"><span class="text-white-50 icon"><i class="fas fa-caret-down"></i></span><span class="text-white text">Show</span></button>
+                                                        </td>
+                                                    {%endif%}
+                                                </tr>
+
+                                                {% if text.pii %}
+                                                <tr id="PII_subtable${{text.msg_id}}" class="hidden-row">
+                                                    <td colspan="9">
+                                                        <table class="table table-sm" style="color: var(--bs-primary)">
+                                                            <tr>
+                                                                <th>PII Type</th>
+                                                                <th>PII Source</th>
+                                                                <th>PII Value</th>
+                                                                <th>PII Id</th>
+                                                            </tr>
+                                                            {% for pii in text.pii %}
+                                                            <tr>
+                                                                <td>{{ pii.type }}</td>
+                                                                <td>{{ pii.source }}</td>
+                                                                <td>{{ pii.value }}</td>
+                                                                <td>{{ pii.id }}</td>
+                                                            </tr>
+                                                            {% endfor %}
+                                                        </table>
+                                                    </td>
+                                                </tr>
+                                                {%endif%}
+
+                                                {% if text.password %}
+                                                <tr id="Password_subtable${{text.msg_id}}" class="hidden-row">
+                                                    <td colspan="9">
+                                                        <table class="table table-sm" style="color: var(--bs-red)">
+                                                            <tr>
+                                                                <th>Password</th>
+                                                                <th>Analyzer</th>
+                                                                <th>Id</th>
+                                                            </tr>
+                                                            {% for password in text.password %}
+                                                            <tr>
+                                                                <td>{{ password.password }}</td>
+                                                                <td>{{ password.source }}</td>
+                                                                <td>{{ password.id }}</td>
+                                                            </tr>
+                                                            {% endfor %}
+                                                        </table>
+                                                    </td>
+                                                </tr>
+                                                {%endif%}
+
+                                                {% endfor %}
+                                            </tbody>
+                                            <tfoot>
+                                                <tr>
+                                                    <td><strong><strong>Process ID</strong></strong></td>
+                                                    <td><strong><strong>Start date</strong></strong></td>
+                                                    <td><strong><strong>End date</strong></strong></td>
+                                                    <td><strong><strong>Status</strong></strong></td>
+                                                    <td><strong><strong>Details</strong></strong></td>
+                                                    <td><strong><strong>Analysis start date</strong></strong></td>
+                                                    <td><strong><strong>Analysis end date</strong></strong></td>
+                                                    <td><strong><strong>Sent</strong></strong></td>
+                                                    <td><strong><strong>Received</strong></strong></td>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <footer class="bg-white sticky-footer"></footer>
+        </div><a class="border rounded-circle d-inline scroll-to-top" href="#page-top"><i class="fas fa-angle-up"></i></a>
+    </div>
+    {% include "footer.html" %}
+    <script src="assets/bootstrap/js/bootstrap.min.js"></script>
+</body>
+
+</html>
