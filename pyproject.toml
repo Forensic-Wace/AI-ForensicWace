@@ -2,10 +2,10 @@
 name = "ForensicWace-SE"
 description = "Forensic WACE SE - Forensic WhatsApp Chat Extractor Server Edition"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: GNU Affero General Public License v3 (AGPLv3)",
+    "License :: OSI Approved :: MIT License",
     "Operating System :: Windows",
     "Operating System :: POSIX :: Linux"
 ]
@@ -37,3 +37,13 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 "forensicWace_SE.assets" = ["*.*"]
+
+[tool.ruff]
+target-version = "py310"
+src = ["src"]
+
+[tool.ruff.lint]
+# Critical-only baseline for the research-grade codebase: syntax errors,
+# invalid literal comparisons, forgotten debug artifacts, undefined names.
+# The rule set will be widened as the refactor phases land.
+select = ["E9", "F63", "F7", "F82"]

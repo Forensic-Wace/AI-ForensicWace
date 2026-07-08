@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  secret-scan:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  lint:
+    name: Lint (ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - run: pip install ruff
+      - run: ruff check src/
+
+  evidence-guard:
+    name: Evidence data guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fail if evidence-like files are tracked
+        run: |
+          MATCHES=$(git ls-files | grep -iE '(device_extractions|ChatStorage\.sqlite|msgstore.*\.db|wa\.db|Manifest\.(db|plist))' || true)
+          if [ -n "$MATCHES" ]; then
+            echo "::error::Evidence-like files must never be committed:"
+            echo "$MATCHES"
+            exit 1
+          fi
+
+  tests:
+    name: Tests (pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - run: pip install pytest
+      - name: Run tests (tolerate empty suite for now)
+        run: |
+          pytest -q || CODE=$?
+          # Exit code 5 = "no tests collected" — accepted until the test suite lands (Phase 1).
+          if [ "${CODE:-0}" -ne 0 ] && [ "${CODE:-0}" -ne 5 ]; then exit "${CODE}"; fi

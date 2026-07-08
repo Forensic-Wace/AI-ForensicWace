@@ -1,3 +1,18 @@
+# Runtime configuration — the Settings page writes real API keys into this
+# file at runtime. Copy config.ini.example to config.ini to get started.
+config.ini
+
+# Evidence data must NEVER be committed — usable locally for development only.
+# Folder patterns (any depth) + well-known WhatsApp evidence DB file names.
+device_extractions_IOS/
+device_extractions_Android/
+ChatStorage.sqlite
+msgstore*.db
+msgstore*.db.crypt*
+wa.db
+Manifest.db
+Manifest.plist
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

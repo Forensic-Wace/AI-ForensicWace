@@ -1,6 +1,6 @@
 # Forensic Wace - Server Edition
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Python 3.9+](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.10+](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Flask](https://img.shields.io/badge/Backend-Flask-green.svg)](https://flask.palletsprojects.com/)
 [![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL-blue.svg)](https://www.postgresql.org/)
 [![GitHub](https://img.shields.io/badge/GitHub-ForensicWace-black.svg)](https://github.com/Forensic-Wace/AI-ForensicWace)
@@ -248,7 +248,7 @@ All Docker services are **OPTIONAL**. Enable only the analyzers you need by sele
 
 ```bash
 # Python version check
-python3 --version  # Should be 3.9 or higher
+python3 --version  # Should be 3.10 or higher
 
 # PostgreSQL installation
 # Windows: https://www.postgresql.org/download/windows/
@@ -300,6 +300,13 @@ pip install -r requirements.txt
 
 
 ### 1.System Configuration
+
+Copy the template first — `config.ini` is gitignored because the Settings page
+writes your real API keys into it at runtime:
+
+```bash
+cp config.ini.example config.ini
+```
 
 **config.ini:**
 ```ini
