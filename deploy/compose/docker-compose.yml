@@ -1,0 +1,94 @@
+# Forensic Wace — full local stack.
+#
+#   docker compose --profile core up --build                    # API + PostgreSQL
+#   docker compose --profile core --profile analyzers-local up  # + Whisper & Tesseract
+#
+# Put evidence extractions in ../../data/device_extractions_IOS and
+# ../../data/device_extractions_Android (never commit them), then open
+# http://localhost:8080/docs
+#
+# DeepPass and LAVIS have no public images; clone the forks next to this
+# repository and uncomment their services below.
+
+name: forensicwace
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    profiles: [core]
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-forensicwace}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-forensicwace}
+      POSTGRES_DB: ${POSTGRES_DB:-forensic_wace}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-forensicwace}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: ../..
+      dockerfile: services/api/Dockerfile
+      args:
+        CORE_EXTRAS: ${CORE_EXTRAS:-postgres}
+    profiles: [core]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      FW_DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-forensicwace}:${POSTGRES_PASSWORD:-forensicwace}@postgres:5432/${POSTGRES_DB:-forensic_wace}
+      FW_DATA_DIR: /data
+      FW_DEEPPASS_ENDPOINT: ${FW_DEEPPASS_ENDPOINT:-}
+      FW_WHISPER_ENDPOINT: ${FW_WHISPER_ENDPOINT:-http://whisper:9000/asr}
+      FW_TESSERACT_ENDPOINT: ${FW_TESSERACT_ENDPOINT:-http://tesseract:8884/v1/ocr}
+      FW_LAVIS_ENDPOINT: ${FW_LAVIS_ENDPOINT:-}
+      FW_HF_TOKEN: ${FW_HF_TOKEN:-}
+      FW_OPENAI_API_KEY: ${FW_OPENAI_API_KEY:-}
+      FW_OPENAI_ASSISTANT_ID: ${FW_OPENAI_ASSISTANT_ID:-}
+      FW_MS_PII_ENDPOINT: ${FW_MS_PII_ENDPOINT:-}
+      FW_MS_PII_KEY: ${FW_MS_PII_KEY:-}
+      FW_MS_S2T_KEY: ${FW_MS_S2T_KEY:-}
+      FW_MS_S2T_REGION: ${FW_MS_S2T_REGION:-}
+      FW_MS_CV_ENDPOINT: ${FW_MS_CV_ENDPOINT:-}
+      FW_MS_CV_KEY: ${FW_MS_CV_KEY:-}
+      FW_USE_MS_S2T: ${FW_USE_MS_S2T:-false}
+      FW_USE_MS_OCR_CAPTION: ${FW_USE_MS_OCR_CAPTION:-false}
+      FW_USE_MS_PII: ${FW_USE_MS_PII:-false}
+      FW_USE_OPENAI_GPT: ${FW_USE_OPENAI_GPT:-false}
+    volumes:
+      - ../../data:/data
+    ports:
+      - "8080:8080"
+
+  whisper:
+    image: onerahmet/openai-whisper-asr-webservice:latest
+    profiles: [analyzers-local]
+    environment:
+      ASR_MODEL: ${WHISPER_MODEL:-base}
+      ASR_ENGINE: openai_whisper
+    ports:
+      - "9000:9000"
+
+  tesseract:
+    image: hertzg/tesseract-server:latest
+    profiles: [analyzers-local]
+    ports:
+      - "7865:8884"
+
+  # deeppass:
+  #   build: ../../../DeepPass_RestApi   # git clone https://github.com/daniele96/DeepPass_RestApi
+  #   profiles: [analyzers-local]
+  #   ports:
+  #     - "5000:5000"
+
+  # lavis:
+  #   build: ../../../ImageCaption_lavis  # git clone https://github.com/daniele96/ImageCaption_lavis
+  #   profiles: [analyzers-local]
+  #   ports:
+  #     - "7866:5000"
+
+volumes:
+  postgres-data:

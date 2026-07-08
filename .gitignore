@@ -6,6 +6,7 @@ config.ini
 # Folder patterns (any depth) + well-known WhatsApp evidence DB file names.
 device_extractions_IOS/
 device_extractions_Android/
+/data/
 ChatStorage.sqlite
 msgstore*.db
 msgstore*.db.crypt*

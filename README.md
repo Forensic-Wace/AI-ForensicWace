@@ -57,6 +57,31 @@ Although not free from imperfections or bugs, it embodies a valuable contributio
 
 ---
 
+## 🚧 Enterprise Edition (v2) — API-first rewrite
+
+The platform is being rewritten into microservices (see
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)). Phase 1 is available on this
+branch: a **stateless REST API** (FastAPI) on top of a rewritten core library
+([libs/forensicwace_core](libs/forensicwace_core)) with parameterized,
+read-only evidence queries and environment-based configuration.
+
+```bash
+# Full stack with Docker (PostgreSQL + API):
+docker compose -f deploy/compose/docker-compose.yml --profile core up --build
+# Then put extractions under ./data/ and open http://localhost:8080/docs
+
+# Or run the API locally:
+pip install -e libs/forensicwace_core[postgres] -e services/api
+cp .env.example .env   # adjust FW_* variables
+uvicorn forensicwace_api.main:app --port 8080
+```
+
+Interactive OpenAPI documentation is served at `/docs`. The legacy Flask web
+interface below still works and will be replaced by a React frontend in
+Phase 2.
+
+---
+
 ## ✨ Key Features
 
 ### 1. **Comprehensive Database Support**

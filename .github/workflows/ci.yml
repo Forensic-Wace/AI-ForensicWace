@@ -29,7 +29,7 @@ jobs:
         with:
           python-version: "3.10"
       - run: pip install ruff
-      - run: ruff check src/
+      - run: ruff check src/ libs/ services/
 
   evidence-guard:
     name: Evidence data guard
@@ -53,9 +53,5 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.10"
-      - run: pip install pytest
-      - name: Run tests (tolerate empty suite for now)
-        run: |
-          pytest -q || CODE=$?
-          # Exit code 5 = "no tests collected" — accepted until the test suite lands (Phase 1).
-          if [ "${CODE:-0}" -ne 0 ] && [ "${CODE:-0}" -ne 5 ]; then exit "${CODE}"; fi
+      - run: pip install -e libs/forensicwace_core -e services/api pytest httpx
+      - run: pytest libs/forensicwace_core/tests services/api/tests -q
