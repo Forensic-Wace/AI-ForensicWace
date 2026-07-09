@@ -1,0 +1,175 @@
+/**
+ * Typed client for the Forensic Wace REST API (mirrors services/api schemas).
+ * All paths are relative: vite dev-server and nginx both proxy /api.
+ */
+
+const BASE = "/api/v1";
+
+export class ApiError extends Error {
+  constructor(
+    public status: number,
+    detail: string,
+  ) {
+    super(detail);
+  }
+}
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(`${BASE}${path}`, init);
+  if (!response.ok) {
+    let detail = response.statusText;
+    try {
+      detail = (await response.json()).detail ?? detail;
+    } catch {
+      /* non-JSON error body */
+    }
+    throw new ApiError(response.status, detail);
+  }
+  return response.json() as Promise<T>;
+}
+
+// --- Types -------------------------------------------------------------
+
+export type Platform = "ios" | "android";
+
+export interface IosBackup {
+  udid: string;
+  device_name: string | null;
+  ios_version: string | null;
+  serial_number: string | null;
+  device_type: string | null;
+  backup_date: string | null;
+}
+
+export interface AndroidBackup {
+  folder: string;
+  db_file: string;
+  size_mb: number | null;
+  created_at: string | null;
+}
+
+export interface DatabaseFingerprint {
+  sha256: string;
+  md5: string;
+  size_mb: number | null;
+}
+
+export interface BackupDetail {
+  info?: IosBackup | null;
+  folder?: string;
+  db_file?: string;
+  database: DatabaseFingerprint;
+}
+
+export interface PrivateChat {
+  counters: Record<string, number | string | null>;
+  messages: Record<string, unknown>[];
+}
+
+export interface AnalyzerStatus {
+  name: string;
+  available: boolean;
+  detail: string;
+}
+
+export interface AnalysisRequest {
+  platform: Platform;
+  backup_id: string;
+  db_file?: string;
+  date_from?: string | null;
+  date_to?: string | null;
+  received: boolean;
+  sent: boolean;
+  contacts: string[];
+  groups: string[];
+  message_types: string[];
+  analyzers: string[];
+}
+
+export interface Process {
+  process_id: string;
+  platform: string | null;
+  backup_id: string | null;
+  status: string | null;
+  details: string | null;
+  start_time: string | null;
+  end_time: string | null;
+  analyzers: string[];
+}
+
+export interface Finding {
+  type: string | null;
+  value: string | null;
+  source: string;
+}
+
+export interface TextResult {
+  msg_id: string;
+  text: string;
+  date: string | null;
+  piis: Finding[];
+  passwords: Finding[];
+}
+
+// --- Endpoints ------------------------------------------------------------
+
+export const api = {
+  listIosBackups: () => request<IosBackup[]>("/backups/ios"),
+  listAndroidBackups: () => request<AndroidBackup[]>("/backups/android"),
+  backupDetail: (platform: Platform, id: string) =>
+    request<BackupDetail>(`/backups/${platform}/${encodeURIComponent(id)}`),
+
+  chats: (platform: Platform, id: string) =>
+    request<Record<string, unknown>[]>(`/backups/${platform}/${encodeURIComponent(id)}/chats`),
+  privateChat: (platform: Platform, id: string, phone: string, typeFilter?: string) => {
+    const query = typeFilter ? `?type_filter=${encodeURIComponent(typeFilter)}` : "";
+    return request<PrivateChat>(
+      `/backups/${platform}/${encodeURIComponent(id)}/chats/${encodeURIComponent(phone)}/messages${query}`,
+    );
+  },
+  groups: (platform: Platform, id: string) =>
+    request<Record<string, unknown>[]>(`/backups/${platform}/${encodeURIComponent(id)}/groups`),
+  groupChat: (id: string, group: string, typeFilter?: string) => {
+    const query = typeFilter ? `?type_filter=${encodeURIComponent(typeFilter)}` : "";
+    return request<PrivateChat>(
+      `/backups/ios/${encodeURIComponent(id)}/groups/${encodeURIComponent(group)}/messages${query}`,
+    );
+  },
+  gpsLocations: (platform: Platform, id: string) =>
+    request<Record<string, unknown>[]>(`/backups/${platform}/${encodeURIComponent(id)}/gps-locations`),
+  blockedContacts: (id: string) =>
+    request<Record<string, unknown>[]>(`/backups/ios/${encodeURIComponent(id)}/blocked-contacts`),
+
+  analyzersStatus: () => request<AnalyzerStatus[]>("/analyzers/status"),
+
+  submitAnalysis: (body: AnalysisRequest) =>
+    request<{ process_id: string; status: string }>("/analyses", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }),
+  listAnalyses: () => request<Process[]>("/analyses"),
+  analysis: (processId: string) => request<Process>(`/analyses/${encodeURIComponent(processId)}`),
+  analysisResults: (processId: string) =>
+    request<TextResult[]>(`/analyses/${encodeURIComponent(processId)}/results`),
+
+  verifyReport: (report: File, token: File) => {
+    const form = new FormData();
+    form.append("report", report);
+    form.append("token", token);
+    return request<{ verified: boolean }>("/reports/verify", { method: "POST", body: form });
+  },
+};
+
+/** URL of a signed PDF export (plain link → browser download). */
+export function exportUrl(id: string, kind: string): string {
+  return `${BASE}/backups/ios/${encodeURIComponent(id)}/exports/${kind}`;
+}
+
+/** URL of an iOS media file / profile picture. */
+export function mediaUrl(id: string, params: { relativePath?: string; profileOf?: string }): string {
+  const query = params.relativePath
+    ? `relative_path=${encodeURIComponent(params.relativePath)}`
+    : `profile_of=${encodeURIComponent(params.profileOf ?? "")}`;
+  return `${BASE}/backups/ios/${encodeURIComponent(id)}/media?${query}`;
+}

@@ -273,7 +273,7 @@ working stack on a laptop; `.env.example` documents every variable.
 |---|---|---|
 | **0. OSS hygiene** ✅ | Clean public-ready repo | §8.1 complete; CI (ruff + pytest + gitleaks) green; history audited |
 | **1. API-first refactor** ✅ | FastAPI `api` + `libs/forensicwace_core` (full rewrite); env-var config; parameterized read-only queries; Dockerfiles + compose `core` profile | Full current feature set usable via documented REST API; `docker compose up` works |
-| **2. React frontend** | `frontend/` SPA (React+Vite+TS), OpenAPI-generated client, nginx image | Feature parity with Jinja UI; Jinja templates deleted |
+| **2. React frontend** ✅ | `frontend/` SPA (React+Vite+TS), typed API client, nginx image | Feature parity with Jinja UI; legacy Flask monolith deleted |
 | **3. Async pipeline** | RabbitMQ + Celery workers; stage queues; SSE progress | Analysis survives api restarts; retry + DLQ observable in UI |
 | **4. Schema registry** | §4 fingerprinting + query packs + synthetic fixtures + CI matrix | Current iOS/Android schemas ported to packs; unknown schema yields actionable report |
 | **5. Kubernetes** | Helm chart + KEDA autoscaling + observability | Deploys on a stock k3s/EKS cluster; workers scale on queue depth in a load test |

@@ -8,19 +8,19 @@ welcome at every level: code, docs, testing, and WhatsApp schema descriptors.
 ## Getting started
 
 1. Fork and clone the repository.
-2. Create a virtual environment (Python **3.10+** required):
+2. Backend — create a virtual environment (Python **3.10+** required):
    ```bash
    python -m venv venv
    source venv/bin/activate   # Windows: venv\Scripts\activate
-   pip install -r requirements.txt
+   pip install -e "libs/forensicwace_core[postgres]" -e services/api
+   cp .env.example .env       # configure FW_* variables — never commit .env
+   uvicorn forensicwace_api.main:app --reload --port 8080
    ```
-3. Copy the configuration template and fill in what you need:
+3. Frontend (Node 20+):
    ```bash
-   cp config.ini.example config.ini
+   cd frontend && npm install && npm run dev
    ```
-   `config.ini` is gitignored on purpose: the Settings page writes your real API
-   keys into it at runtime. **Never commit it.**
-4. Set up PostgreSQL as described in the [README](README.md#-installation).
+4. Or run the whole stack with Docker: see the [README](README.md#quick-start-docker).
 
 ## Golden rules
 
@@ -36,10 +36,11 @@ welcome at every level: code, docs, testing, and WhatsApp schema descriptors.
 ## Workflow
 
 1. Create a feature branch: `git checkout -b feature/my-feature`.
-2. Make your changes. Run the linter locally before pushing:
+2. Make your changes. Run linter and tests locally before pushing:
    ```bash
-   pip install ruff
-   ruff check src/
+   pip install ruff pytest httpx
+   ruff check libs/ services/
+   pytest libs/forensicwace_core/tests services/api/tests
    ```
 3. Open a Pull Request against `main` using the PR template.
 
@@ -53,10 +54,13 @@ and column inventory of the unsupported database (**structure only — never row
 
 ## Adding a new AI analyzer
 
-1. Create the service module in `src/forensicWace_SE/services/`.
-2. Implement a `check_status()` health check and the main analysis function.
-3. Register it in `textServices.py` and add its configuration to `config.ini.example`.
-4. Add a UI toggle in the Settings template.
+1. Create an adapter module in `libs/forensicwace_core/forensicwace_core/analysis/analyzers/`
+   exposing `analyze(text) -> list[Finding]` (or a media-enrichment function)
+   and `check_status() -> AnalyzerStatus`. Keep heavy imports lazy.
+2. Register it in `analysis/analyzers/__init__.py` (`TEXT_ANALYZERS` / `STATUS_CHECKS`).
+3. Add its settings to `forensicwace_core/config.py` and document them in `.env.example`.
+4. Expose it in the frontend: add the key to `TEXT_ANALYZERS`/`MEDIA_ANALYZERS`
+   in `frontend/src/pages/AnalyzePage.tsx`.
 
 ## Questions
 

@@ -18,13 +18,17 @@ WORKDIR /app
 
 COPY libs/forensicwace_core /app/libs/forensicwace_core
 COPY services/api /app/services/api
+COPY assets /app/assets
 
 RUN pip install --no-cache-dir \
     "/app/libs/forensicwace_core[${CORE_EXTRAS}]" \
     /app/services/api
 
 # Evidence extractions are mounted here (see FW_DATA_DIR)
-ENV FW_DATA_DIR=/data
+ENV FW_DATA_DIR=/data \
+    FW_ASSETS_DIR=/app/assets \
+    FW_TSA_CERTIFICATE_FILE=/app/assets/reportCertificate/tsa.crt \
+    FW_PRESIDIO_RECOGNIZERS_FILE=/app/assets/presidio_recognizers/recognizers.yaml
 VOLUME /data
 
 EXPOSE 8080
