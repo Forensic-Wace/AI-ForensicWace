@@ -52,7 +52,7 @@ export default function ProcessesPage() {
                 <th>Platform</th>
                 <th>Backup</th>
                 <th>Status</th>
-                <th>Details</th>
+                <th>Progress</th>
                 <th>Started</th>
                 <th>Results</th>
               </tr>
@@ -66,7 +66,12 @@ export default function ProcessesPage() {
                   <td>
                     <StatusBadge status={p.status} />
                   </td>
-                  <td>{p.details}</td>
+                  <td>
+                    {p.total_messages > 0
+                      ? `${p.analyzed_messages}/${p.total_messages}` +
+                        (p.failed_messages > 0 ? ` (${p.failed_messages} failed)` : "")
+                      : p.details}
+                  </td>
                   <td>{p.start_time}</td>
                   <td>
                     <Link to={`/processes/${p.process_id}`}>View results</Link>

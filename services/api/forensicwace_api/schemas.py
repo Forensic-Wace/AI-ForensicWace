@@ -66,6 +66,9 @@ class ProcessOut(BaseModel):
     start_time: datetime | None = None
     end_time: datetime | None = None
     analyzers: list[str] = []
+    total_messages: int = 0
+    analyzed_messages: int = 0
+    failed_messages: int = 0
 
 
 class FindingOut(BaseModel):

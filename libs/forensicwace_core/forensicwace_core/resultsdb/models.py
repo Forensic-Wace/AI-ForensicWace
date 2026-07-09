@@ -92,3 +92,6 @@ class ProcessStatus(Base):
     groups = Column(String)
     msg_type = Column(String)
     analyzers = Column(String)
+    total_messages = Column(Integer, default=0)
+    analyzed_messages = Column(Integer, default=0)
+    failed_messages = Column(Integer, default=0)

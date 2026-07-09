@@ -53,5 +53,5 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.10"
-      - run: pip install -e libs/forensicwace_core -e services/api pytest httpx
-      - run: pytest libs/forensicwace_core/tests services/api/tests -q
+      - run: pip install -e libs/forensicwace_core -e services/api -e services/worker pytest httpx
+      - run: pytest libs/forensicwace_core/tests services/api/tests services/worker/tests -q

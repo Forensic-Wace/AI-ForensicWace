@@ -1,12 +1,17 @@
 """The analysis pipeline: extract messages, enrich media, detect PII/passwords.
 
-Phase 1 runs this in a background thread inside the API service; Phase 3 moves
-the exact same entrypoint (``run_analysis``) into queue-driven workers.
+The building blocks are executor-agnostic: ``extract_messages`` and
+``process_message`` are called by the Celery workers (one task per message)
+and by the in-process thread fallback (``run_analysis``) alike. Progress is
+tracked in the ``process_status`` table with atomic counters, so any number of
+concurrent workers can report safely.
 """
 
 import logging
 from datetime import datetime
 from pathlib import Path
+
+from sqlalchemy import update
 
 from ..config import get_settings
 from ..constants import Platform
@@ -26,7 +31,8 @@ S2T_KEY = "S2T"
 IMAGE_KEY = "image_OCR"
 
 
-def _extract_messages(process: ProcessStatus) -> list[Message]:
+def extract_messages(process: ProcessStatus) -> list[Message]:
+    """Extract the messages selected by an analysis request."""
     if process.OS == Platform.ANDROID:
         backup_dir = get_settings().android_dir / process.extraction_name_udid
         rows = android.get_filtered_messages(
@@ -46,62 +52,164 @@ def _extract_messages(process: ProcessStatus) -> list[Message]:
     return []
 
 
-def _persist_message(session, process_id: str, message: Message, findings) -> None:
-    text_row = Text(
-        msg_id=str(message.id),
-        process_id=process_id,
-        text=message.analysis_text() or "",
-        user_id=1,  # single-user until multi-user auth lands
-        date=message.timestamp,
-    )
-    for finding in findings:
-        if finding.kind == "password":
-            text_row.passwords.append(Password(password=finding.value, source=finding.source))
+def needs_media_stage(message: Message, requested: list[str]) -> bool:
+    """True when the message must pass through audio/image enrichment first."""
+    if message.media_path is None:
+        return False
+    is_audio = S2T_KEY in requested and "audio" in (message.mime_type or "")
+    is_image = IMAGE_KEY in requested and message.message_type == "image"
+    return is_audio or is_image
+
+
+def enrich_media(message: Message, requested: list[str]) -> Message:
+    """Run the requested media analyzers, storing their output on the message."""
+    if S2T_KEY in requested and message.media_path and "audio" in (message.mime_type or ""):
+        speech.transcribe(message)
+    if IMAGE_KEY in requested and message.media_path and message.message_type == "image":
+        vision.describe(message)
+    return message
+
+
+def analyze_and_persist(message: Message, process_id: str, requested: list[str]) -> None:
+    """Run the text analyzers on one message and store text + findings.
+
+    Idempotent per (process_id, msg_id): an earlier row from a retried task is
+    replaced instead of duplicated.
+    """
+    text = message.analysis_text()
+    if not text:
+        return
+
+    text_analyzers = [a for a in requested if a in analyzers.TEXT_ANALYZERS]
+    findings = analyzers.run_text_analyzers(text, text_analyzers)
+
+    with session_scope() as session:
+        stale = (
+            session.query(Text)
+            .filter(Text.process_id == process_id, Text.msg_id == str(message.id))
+            .all()
+        )
+        for row in stale:
+            session.delete(row)
+
+        text_row = Text(
+            msg_id=str(message.id),
+            process_id=process_id,
+            text=text,
+            user_id=1,  # single-user until multi-user auth lands
+            date=message.timestamp,
+        )
+        for finding in findings:
+            if finding.kind == "password":
+                text_row.passwords.append(Password(password=finding.value, source=finding.source))
+            else:
+                text_row.piis.append(PII(type=finding.entity_type, value=finding.value, source=finding.source))
+        session.add(text_row)
+
+
+# --- Progress tracking -------------------------------------------------------
+
+
+def start_processing(process_id: str, total: int) -> None:
+    with session_scope() as session:
+        session.execute(
+            update(ProcessStatus)
+            .where(ProcessStatus.process_id == process_id)
+            .values(
+                status="Analyzing",
+                total_messages=total,
+                analyzed_messages=0,
+                failed_messages=0,
+                details=f"Analyzing 0 over {total} messages",
+            )
+        )
+
+
+def record_message_done(process_id: str, failed: bool = False) -> None:
+    """Atomically bump the progress counters and finalize when complete."""
+    counter = ProcessStatus.failed_messages if failed else ProcessStatus.analyzed_messages
+    column = "failed_messages" if failed else "analyzed_messages"
+    with session_scope() as session:
+        session.execute(
+            update(ProcessStatus).where(ProcessStatus.process_id == process_id).values({column: counter + 1})
+        )
+        session.commit()
+
+        process = repositories.get_process(session, process_id)
+        if process is None:
+            return
+        done = (process.analyzed_messages or 0) + (process.failed_messages or 0)
+        total = process.total_messages or 0
+        if done >= total:
+            process.status = "Finish"
+            process.details = _summary(process.analyzed_messages or 0, process.failed_messages or 0, total)
+            process.end_time = datetime.now()
         else:
-            text_row.piis.append(PII(type=finding.entity_type, value=finding.value, source=finding.source))
-    session.add(text_row)
+            process.details = f"Analyzed {done} over {total} messages" + (
+                f" ({process.failed_messages} failed)" if process.failed_messages else ""
+            )
+
+
+def mark_process_error(process_id: str, reason: str) -> None:
+    with session_scope() as session:
+        session.execute(
+            update(ProcessStatus)
+            .where(ProcessStatus.process_id == process_id)
+            .values(status="Error", details=reason[:500], end_time=datetime.now())
+        )
+
+
+def finish_empty(process_id: str) -> None:
+    with session_scope() as session:
+        session.execute(
+            update(ProcessStatus)
+            .where(ProcessStatus.process_id == process_id)
+            .values(status="Finish", details="No messages matched the request", end_time=datetime.now())
+        )
+
+
+def _summary(analyzed: int, failed: int, total: int) -> str:
+    summary = f"Analyzed {analyzed} of {total} messages"
+    if failed:
+        summary += f" — {failed} failed after retries (see dead-letter queue)"
+    return summary
+
+
+# --- In-process fallback executor -----------------------------------------------
+
+
+def process_message(message: Message, process_id: str, requested: list[str]) -> None:
+    """Full per-message pipeline (media enrichment + text analysis)."""
+    enrich_media(message, requested)
+    analyze_and_persist(message, process_id, requested)
 
 
 def run_analysis(process_id: str) -> None:
-    """Execute the analysis for a previously registered process."""
+    """Synchronous executor used when no message broker is configured."""
     with session_scope() as session:
         process = repositories.get_process(session, process_id)
         if process is None:
             logger.error("Unknown analysis process %s", process_id)
             return
         requested = [a for a in (process.analyzers or "").split(",") if a]
-        text_analyzers = [a for a in requested if a in analyzers.TEXT_ANALYZERS]
-
         try:
-            messages = _extract_messages(process)
+            messages = extract_messages(process)
         except Exception as exc:
+            logger.exception("Extraction failed for process %s", process_id)
             process.status = "Error"
             process.details = f"Extraction failed: {exc}"
             process.end_time = datetime.now()
             return
 
-        total = len(messages)
-        process.status = "Analyzing"
-        process.details = f"Analyzing 0 over {total} messages"
-        session.commit()
+    if not messages:
+        finish_empty(process_id)
+        return
 
-        for index, message in enumerate(messages, start=1):
-            try:
-                if S2T_KEY in requested and message.media_path and "audio" in (message.mime_type or ""):
-                    speech.transcribe(message)
-                if IMAGE_KEY in requested and message.media_path and message.message_type == "image":
-                    vision.describe(message)
-
-                text = message.analysis_text()
-                if text:
-                    findings = analyzers.run_text_analyzers(text, text_analyzers)
-                    _persist_message(session, process_id, message, findings)
-            except Exception:
-                logger.exception("Analyzer failure on message %s (process %s)", message.id, process_id)
-
-            process.details = f"Analyzed {index} over {total} messages"
-            session.commit()
-
-        process.status = "Finish"
-        process.details = f"Analyzed all {total} messages"
-        process.end_time = datetime.now()
+    start_processing(process_id, len(messages))
+    for message in messages:
+        try:
+            process_message(message, process_id, requested)
+            record_message_done(process_id)
+        except Exception:
+            logger.exception("Analyzer failure on message %s (process %s)", message.id, process_id)
+            record_message_done(process_id, failed=True)

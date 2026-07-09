@@ -33,6 +33,11 @@ class Settings(BaseSettings):
     # --- Results database (PostgreSQL) ------------------------------------
     database_url: Optional[str] = None
 
+    # --- Message broker (RabbitMQ) -----------------------------------------
+    # When set, analysis jobs are dispatched to the Celery workers; when
+    # unset, the API falls back to an in-process background thread (dev mode).
+    broker_url: Optional[str] = None
+
     # --- Report timestamping (RFC 3161) ------------------------------------
     tsa_url: str = "https://freetsa.org/tsr"
     tsa_certificate_file: Optional[Path] = None

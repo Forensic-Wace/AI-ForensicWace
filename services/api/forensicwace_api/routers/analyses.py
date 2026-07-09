@@ -5,17 +5,19 @@ source of truth for progress, so the API stays stateless and the executor can
 move behind a message queue (Phase 3) without any API change.
 """
 
-import threading
+import json
+import time
 import uuid
 from datetime import datetime
 
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 
 from forensicwace_core.backups.android import resolve_db_path
 from forensicwace_core.backups.ios import chatstorage_path, resolve_backup_dir
 from forensicwace_core.config import get_settings
 from forensicwace_core.constants import Platform
-from forensicwace_core.analysis.pipeline import run_analysis
+from forensicwace_core.analysis.dispatch import dispatch_analysis
 from forensicwace_core.resultsdb import repositories
 from forensicwace_core.resultsdb.engine import session_scope
 from forensicwace_core.resultsdb.models import ProcessStatus
@@ -23,6 +25,9 @@ from forensicwace_core.resultsdb.models import ProcessStatus
 from ..schemas import AnalysisRequest, AnalysisSubmitted, FindingOut, ProcessOut, TextResultOut
 
 router = APIRouter(prefix="/analyses", tags=["analysis"])
+
+SSE_POLL_SECONDS = 2
+SSE_MAX_SECONDS = 3600
 
 
 def _to_process_out(process: ProcessStatus) -> ProcessOut:
@@ -35,6 +40,9 @@ def _to_process_out(process: ProcessStatus) -> ProcessOut:
         start_time=process.start_time,
         end_time=process.end_time,
         analyzers=[a for a in (process.analyzers or "").split(",") if a],
+        total_messages=process.total_messages or 0,
+        analyzed_messages=process.analyzed_messages or 0,
+        failed_messages=process.failed_messages or 0,
     )
 
 
@@ -67,7 +75,7 @@ def submit_analysis(request: AnalysisRequest):
         session.add(process)
         process_id = process.process_id
 
-    threading.Thread(target=run_analysis, args=(process_id,), daemon=True).start()
+    dispatch_analysis(process_id)
     return AnalysisSubmitted(process_id=process_id, status="Started")
 
 
@@ -84,6 +92,31 @@ def get_analysis(process_id: str):
         if process is None:
             raise HTTPException(status_code=404, detail="Analysis process not found")
         return _to_process_out(process)
+
+
+@router.get("/{process_id}/events")
+def analysis_events(process_id: str):
+    """Server-Sent Events stream of the process status (ends on completion)."""
+
+    def event_stream():
+        deadline = time.monotonic() + SSE_MAX_SECONDS
+        while time.monotonic() < deadline:
+            with session_scope() as session:
+                process = repositories.get_process(session, process_id)
+                if process is None:
+                    yield 'event: error\ndata: {"detail": "Analysis process not found"}\n\n'
+                    return
+                snapshot = _to_process_out(process).model_dump(mode="json")
+            yield f"data: {json.dumps(snapshot)}\n\n"
+            if snapshot["status"] in ("Finish", "Error"):
+                return
+            time.sleep(SSE_POLL_SECONDS)
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @router.get("/{process_id}/results", response_model=list[TextResultOut])

@@ -40,10 +40,26 @@ def dispose_engine() -> None:
 
 
 def init_db() -> None:
-    """Create all tables. Called once at service startup."""
+    """Create all tables and reconcile late-added columns.
+
+    The column reconciliation is a stopgap until Alembic migrations land: it
+    adds missing nullable/counter columns to pre-existing databases.
+    """
+    from sqlalchemy import inspect, text
+
     from . import models  # noqa: F401 — register mappings
 
-    Base.metadata.create_all(get_engine())
+    engine = get_engine()
+    Base.metadata.create_all(engine)
+
+    inspector = inspect(engine)
+    with engine.begin() as conn:
+        for table in Base.metadata.sorted_tables:
+            existing = {col["name"] for col in inspector.get_columns(table.name)}
+            for column in table.columns:
+                if column.name not in existing:
+                    ddl = f'ALTER TABLE "{table.name}" ADD COLUMN "{column.name}" {column.type.compile(engine.dialect)}'
+                    conn.execute(text(ddl))
 
 
 @contextmanager

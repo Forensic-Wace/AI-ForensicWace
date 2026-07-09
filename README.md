@@ -32,13 +32,17 @@ architecture and roadmap live in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 [frontend]  React + Vite, served by nginx      :3000
      │ /api (proxy)
 [api]       FastAPI — stateless REST           :8080
-     ├── forensicwace_core  (extraction, analysis pipeline, reporting)
-     ├── [postgres]         analysis results & process tracking
+     │ publish job                │ SSE progress
+[rabbitmq]  queues: control · media · text · fw.dead (DLQ)
+     │ consume (retry ×3, acks_late)
+[worker]    Celery — one task per (message, stage), horizontally scalable
+     ├── forensicwace_core  (extraction, analyzers, reporting)
+     ├── [postgres]         analysis results & atomic progress counters
      └── analyzer sidecars  DeepPass · Whisper · Tesseract · LAVIS (optional)
 ```
 
-Next phases: async pipeline (RabbitMQ + workers, KEDA autoscaling), WhatsApp
-schema-version registry, Helm chart. See the [roadmap](docs/ARCHITECTURE.md#9-roadmap).
+Next phases: WhatsApp schema-version registry, Helm chart + KEDA autoscaling
+on queue depth. See the [roadmap](docs/ARCHITECTURE.md#9-roadmap).
 
 ## Quick start (Docker)
 

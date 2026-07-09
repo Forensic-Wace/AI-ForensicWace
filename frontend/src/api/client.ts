@@ -95,6 +95,31 @@ export interface Process {
   start_time: string | null;
   end_time: string | null;
   analyzers: string[];
+  total_messages: number;
+  analyzed_messages: number;
+  failed_messages: number;
+}
+
+/** Live process updates via Server-Sent Events; returns an unsubscribe function. */
+export function subscribeAnalysisEvents(
+  processId: string,
+  onUpdate: (process: Process) => void,
+  onEnd?: () => void,
+): () => void {
+  const source = new EventSource(`${BASE}/analyses/${encodeURIComponent(processId)}/events`);
+  source.onmessage = (event) => {
+    const process = JSON.parse(event.data) as Process;
+    onUpdate(process);
+    if (process.status === "Finish" || process.status === "Error") {
+      source.close();
+      onEnd?.();
+    }
+  };
+  source.onerror = () => {
+    source.close();
+    onEnd?.();
+  };
+  return () => source.close();
 }
 
 export interface Finding {

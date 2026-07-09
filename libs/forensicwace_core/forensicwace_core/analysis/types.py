@@ -31,6 +31,20 @@ class Message:
         parts = [p for p in (self.text, self.transcription, self.caption, self.ocr_text, self.media_caption) if p]
         return " ".join(parts) if parts else None
 
+    def to_dict(self) -> dict:
+        """JSON-safe payload for queue transport."""
+        data = dict(vars(self))
+        data["timestamp"] = self.timestamp.isoformat()
+        data["media_path"] = str(self.media_path) if self.media_path else None
+        return data
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "Message":
+        kwargs = dict(data)
+        kwargs["timestamp"] = datetime.fromisoformat(kwargs["timestamp"])
+        kwargs["media_path"] = Path(kwargs["media_path"]) if kwargs.get("media_path") else None
+        return cls(**kwargs)
+
 
 @dataclass
 class AnalyzerStatus:
