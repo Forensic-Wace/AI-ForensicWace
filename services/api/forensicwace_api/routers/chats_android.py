@@ -7,7 +7,7 @@ they return 501 until the schema registry phase adds support.
 
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Query
 
 from forensicwace_core.backups.android import resolve_db_path
 from forensicwace_core.config import get_settings
@@ -46,8 +46,8 @@ def gps_locations(folder: str, db: str = _DB_QUERY) -> list[dict]:
 
 
 @router.get("/blocked-contacts")
-def blocked_contacts(folder: str):
-    raise HTTPException(
-        status_code=501,
-        detail="Android blocked contacts require wa.db support (planned with the schema registry)",
-    )
+def blocked_contacts(folder: str, db: str = _DB_QUERY) -> list[dict]:
+    # Whether this works is decided by the matched query pack: on the modern
+    # Android schema it raises UnsupportedCapabilityError (block list lives in
+    # wa.db), which the API maps to a 501 with the descriptor id.
+    return android.get_blocked_contacts(_db_path(folder, db))

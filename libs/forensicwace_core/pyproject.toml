@@ -14,6 +14,7 @@ dependencies = [
     "reportlab>=4.0",
     "rfc3161ng>=2.1",
     "protobuf-decoder>=0.4",
+    "PyYAML>=6.0",
 ]
 
 [project.optional-dependencies]

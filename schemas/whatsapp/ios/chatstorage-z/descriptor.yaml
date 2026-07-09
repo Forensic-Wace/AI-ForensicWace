@@ -1,0 +1,31 @@
+# iOS ChatStorage.sqlite — Core Data "Z" schema used by WhatsApp on iOS.
+id: ios-chatstorage-z
+platform: ios
+display_name: "iOS ChatStorage.sqlite (Core Data Z-schema)"
+priority: 10
+
+detect:
+  required_tables:
+    ZWACHATSESSION: [ZPARTNERNAME, ZCONTACTJID, ZSESSIONTYPE, ZLASTMESSAGE, Z_PK]
+    ZWAMESSAGE: [Z_PK, ZMESSAGETYPE, ZFROMJID, ZTOJID, ZMESSAGEDATE, ZCHATSESSION, ZTEXT]
+    ZWAPROFILEPUSHNAME: [ZPUSHNAME, ZJID]
+  optional_tables:
+    ZWAMEDIAITEM: [Z_PK, ZLATITUDE, ZLONGITUDE, ZVCARDNAME, ZVCARDSTRING, ZMEDIALOCALPATH]
+    ZWAMESSAGEINFO: [ZMESSAGE, ZRECEIPTINFO]
+    ZWAGROUPMEMBER: [Z_PK, ZMEMBERJID]
+    ZWACHATPUSHCONFIG: [ZJID, ZMUTEDUNTIL]
+    ZWABLACKLISTITEM: [ZJID]
+
+queries:
+  chat_list: chat_list.sql
+  private_chat_counters: private_chat_counters.sql
+  private_chat_messages: private_chat_messages.sql
+  group_list: group_list.sql
+  group_chat_counters: group_chat_counters.sql
+  group_chat_messages: group_chat_messages.sql
+  gps_locations: gps_locations.sql
+  blocked_contacts: blocked_contacts.sql
+
+capabilities:
+  media_extraction: true   # via Manifest.db (outside this pack)
+  analysis_pipeline: false # iOS analysis extraction not implemented yet

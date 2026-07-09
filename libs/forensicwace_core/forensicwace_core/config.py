@@ -30,6 +30,11 @@ class Settings(BaseSettings):
     # generated without a logo when unset.
     assets_dir: Optional[Path] = None
 
+    # WhatsApp schema registry: versioned descriptors + query packs.
+    # Default resolves relative to the working directory (repo root in dev);
+    # the Docker images set it to the bundled copy.
+    schemas_dir: Path = Path("schemas/whatsapp")
+
     # --- Results database (PostgreSQL) ------------------------------------
     database_url: Optional[str] = None
 

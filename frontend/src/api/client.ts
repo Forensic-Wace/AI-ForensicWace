@@ -54,11 +54,23 @@ export interface DatabaseFingerprint {
   size_mb: number | null;
 }
 
+export interface SchemaInfo {
+  id?: string;
+  display_name?: string;
+  capabilities?: Record<string, boolean>;
+  missing_optional_tables?: string[];
+  // present instead of the fields above when no descriptor matched
+  error?: string;
+  user_version?: number;
+  tables?: Record<string, string[]>;
+}
+
 export interface BackupDetail {
   info?: IosBackup | null;
   folder?: string;
   db_file?: string;
   database: DatabaseFingerprint;
+  schema?: SchemaInfo;
 }
 
 export interface PrivateChat {

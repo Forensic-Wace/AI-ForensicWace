@@ -1,0 +1,34 @@
+# Android msgstore.db — modern schema (message/chat/jid tables + chat_view),
+# used by WhatsApp since ~2.19 after the migration away from the legacy
+# "messages" table.
+id: android-modern-chatview
+platform: android
+display_name: "Android msgstore.db (modern message/chat/jid schema, WhatsApp ~2.19+)"
+priority: 10
+
+detect:
+  required_tables:
+    message: [chat_row_id, from_me, timestamp, message_type, text_data]
+    # raw_string_jid was dropped from chat_view in newer WhatsApp releases;
+    # the pack's queries resolve JIDs via the jid table instead.
+    chat_view: [jid_row_id, subject, last_message_row_id]
+    jid: [user, server]
+  optional_tables:
+    message_location: [latitude, longitude]
+    message_media: [file_path, mime_type]
+
+queries:
+  chat_list: chat_list.sql
+  private_chat_counters: private_chat_counters.sql
+  private_chat_messages: private_chat_messages.sql
+  group_list: group_list.sql
+  gps_locations: gps_locations.sql
+  # Blocked contacts live in wa.db (wa_block_list) for this generation;
+  # a wa.db companion pack is a welcome contribution.
+  blocked_contacts: null
+  group_chat_counters: null
+  group_chat_messages: null
+
+capabilities:
+  media_extraction: true
+  analysis_pipeline: true

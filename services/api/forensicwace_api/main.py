@@ -17,9 +17,11 @@ from forensicwace_core.exceptions import (
     ConfigurationError,
     ExtractionError,
     InvalidIdentifierError,
+    UnknownSchemaError,
+    UnsupportedCapabilityError,
 )
 
-from .routers import analyses, backups, chats_android, chats_ios, health, reports
+from .routers import analyses, backups, chats_android, chats_ios, health, reports, schemas
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +62,8 @@ def create_app() -> FastAPI:
 
     for exc_type, status_code in _ERROR_STATUS.items():
         app.add_exception_handler(exc_type, _domain_error_handler(status_code))
+    app.add_exception_handler(UnknownSchemaError, _unknown_schema_handler)
+    app.add_exception_handler(UnsupportedCapabilityError, _unsupported_capability_handler)
 
     app.include_router(health.router)
     prefix = "/api/v1"
@@ -68,7 +72,31 @@ def create_app() -> FastAPI:
     app.include_router(chats_android.router, prefix=prefix)
     app.include_router(analyses.router, prefix=prefix)
     app.include_router(reports.router, prefix=prefix)
+    app.include_router(schemas.router, prefix=prefix)
     return app
+
+
+async def _unknown_schema_handler(request: Request, exc: UnknownSchemaError) -> JSONResponse:
+    """Actionable unknown-schema report: the payload is exactly what a
+    schema-support issue needs (structure only, never row data)."""
+    return JSONResponse(
+        status_code=422,
+        content={
+            "detail": str(exc),
+            "platform": exc.platform,
+            "user_version": exc.user_version,
+            "tables": exc.tables,
+            "how_to_contribute": (
+                "This database uses a WhatsApp schema generation we don't have a "
+                "query pack for yet. Please open a 'WhatsApp schema support' issue "
+                "on GitHub including this JSON payload (it contains structure only)."
+            ),
+        },
+    )
+
+
+async def _unsupported_capability_handler(request: Request, exc: UnsupportedCapabilityError) -> JSONResponse:
+    return JSONResponse(status_code=501, content={"detail": str(exc)})
 
 
 def _domain_error_handler(status_code: int):

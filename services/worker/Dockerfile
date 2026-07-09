@@ -18,6 +18,7 @@ WORKDIR /app
 COPY libs/forensicwace_core /app/libs/forensicwace_core
 COPY services/worker /app/services/worker
 COPY assets /app/assets
+COPY schemas /app/schemas
 
 RUN pip install --no-cache-dir \
     "/app/libs/forensicwace_core[${CORE_EXTRAS}]" \
@@ -25,6 +26,7 @@ RUN pip install --no-cache-dir \
 
 ENV FW_DATA_DIR=/data \
     FW_ASSETS_DIR=/app/assets \
+    FW_SCHEMAS_DIR=/app/schemas/whatsapp \
     FW_TSA_CERTIFICATE_FILE=/app/assets/reportCertificate/tsa.crt \
     FW_PRESIDIO_RECOGNIZERS_FILE=/app/assets/presidio_recognizers/recognizers.yaml
 VOLUME /data

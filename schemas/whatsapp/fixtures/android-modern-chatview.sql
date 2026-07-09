@@ -1,14 +1,6 @@
-import os
-import sqlite3
-from pathlib import Path
+-- Synthetic fixture for the android-modern-chatview schema generation.
+-- Schema subset + fake rows only. NEVER derive fixtures from real evidence.
 
-import pytest
-
-REPO_ROOT = Path(__file__).parents[3]
-os.environ.setdefault("FW_SCHEMAS_DIR", str(REPO_ROOT / "schemas" / "whatsapp"))
-
-# Minimal synthetic msgstore.db: schema subset + fake rows. Never real data.
-ANDROID_FIXTURE_SQL = """
 CREATE TABLE jid (_id INTEGER PRIMARY KEY, user TEXT, server TEXT, raw_string TEXT);
 CREATE TABLE chat_view (_id INTEGER PRIMARY KEY, jid_row_id INTEGER, subject TEXT,
                         raw_string_jid TEXT, last_message_row_id INTEGER);
@@ -26,16 +18,6 @@ INSERT INTO chat_view VALUES (2, 2, 'Test Group', 'group1@g.us', 3);
 INSERT INTO message VALUES (1, 1, 0, 1700000000000, 0, 'hello from contact');
 INSERT INTO message VALUES (2, 1, 1, 1700000100000, 0, 'hello back');
 INSERT INTO message VALUES (3, 2, 0, 1700000200000, 0, 'group message');
-"""
-
-
-@pytest.fixture
-def android_backup_root(tmp_path: Path) -> Path:
-    backup_dir = tmp_path / "extraction_test"
-    backup_dir.mkdir()
-    db_path = backup_dir / "msgstore.db"
-    conn = sqlite3.connect(db_path)
-    conn.executescript(ANDROID_FIXTURE_SQL)
-    conn.commit()
-    conn.close()
-    return tmp_path
+INSERT INTO message VALUES (4, 1, 0, 1700000300000, 5, NULL);
+INSERT INTO message_media VALUES (1, 'Media/WhatsApp Images/IMG-001.jpg', 1024, 'a caption', 'image/jpeg');
+INSERT INTO message_location VALUES (4, 1, 41.1171, 16.8719);

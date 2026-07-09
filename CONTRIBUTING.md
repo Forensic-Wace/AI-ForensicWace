@@ -46,11 +46,29 @@ welcome at every level: code, docs, testing, and WhatsApp schema descriptors.
 
 ## Adding support for a new WhatsApp schema version
 
-This is one of the most valuable contributions. The plan (see
-[docs/ARCHITECTURE.md §4](docs/ARCHITECTURE.md)) moves all WhatsApp SQL into
-versioned query packs. Until that lands, open a
-[schema support issue](.github/ISSUE_TEMPLATE/schema_support.md) including the table
-and column inventory of the unsupported database (**structure only — never row data**).
+This is one of the most valuable contributions, and it requires **no service
+code changes**. All WhatsApp SQL lives in versioned query packs under
+[schemas/whatsapp/](schemas/whatsapp/):
+
+1. Create `schemas/whatsapp/<platform>/<your-descriptor-id>/descriptor.yaml`
+   (copy an existing one): detection rules (`required_tables` with their
+   columns, `optional_tables`), the query-name → `.sql` file map, and
+   capabilities. Give it a higher `priority` than older generations if it
+   should win on databases matching both.
+2. Write the parameterized `.sql` files next to it (named parameters only —
+   never interpolate values).
+3. Add a **synthetic** fixture in `schemas/whatsapp/fixtures/<descriptor-id>.sql`
+   (schema subset + fake rows — NEVER derived from real evidence) and register
+   it in `EXPECTED_MATCHES` in
+   `libs/forensicwace_core/tests/test_schema_registry.py`.
+4. Run `pytest libs/forensicwace_core/tests/test_schema_registry.py` — the
+   compatibility matrix verifies detection and executes every query in your
+   pack against your fixture.
+
+If you hit an unsupported database and can't contribute the pack yourself,
+open a [schema support issue](.github/ISSUE_TEMPLATE/schema_support.md) — the
+API's unknown-schema error (and the backup overview page) already prints the
+exact table/column inventory to attach (**structure only — never row data**).
 
 ## Adding a new AI analyzer
 

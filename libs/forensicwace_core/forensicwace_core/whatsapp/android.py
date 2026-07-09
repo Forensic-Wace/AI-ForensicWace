@@ -1,31 +1,50 @@
-"""WhatsApp data extraction from Android ``msgstore.db``."""
+"""WhatsApp data extraction from Android ``msgstore.db``.
+
+Extraction SQL is resolved through the schema registry: the database is
+fingerprinted and the matching query pack (schemas/whatsapp/android/...)
+provides the statements. The analysis message selection is assembled
+dynamically (IN clauses sized on the request) and stays in
+:mod:`android_queries`.
+"""
 
 from datetime import datetime
 from pathlib import Path
 
-from ..constants import ANDROID_TYPE_CODES
+from ..constants import ANDROID_TYPE_CODES, Platform
+from ..schema_registry import SchemaMatch, resolve
 from . import android_queries as q
 from .sqlite import open_readonly, query_dicts
 
 
+def schema_match(db_path: Path) -> SchemaMatch:
+    return resolve(db_path, Platform.ANDROID)
+
+
 def get_chat_list(db_path: Path) -> list[dict]:
-    return query_dicts(db_path, q.CHAT_LIST)
+    return query_dicts(db_path, schema_match(db_path).sql("chat_list"))
 
 
 def get_private_chat(db_path: Path, phone_number: str) -> tuple[dict, list[dict]]:
     """Counters and messages for the 1:1 chat matching the last 10 digits."""
-    pattern = f"%{phone_number[-10:]}%"
-    counters = query_dicts(db_path, q.PRIVATE_CHAT_COUNTERS, {"phone_pattern": pattern})
-    messages = query_dicts(db_path, q.PRIVATE_CHAT_MESSAGES, {"phone_pattern": pattern})
+    pack = schema_match(db_path)
+    params = {"phone_pattern": f"%{phone_number[-10:]}%"}
+    counters = query_dicts(db_path, pack.sql("private_chat_counters"), params)
+    messages = query_dicts(db_path, pack.sql("private_chat_messages"), params)
     return counters[0] if counters else {}, messages
 
 
 def get_group_list(db_path: Path) -> list[dict]:
-    return query_dicts(db_path, q.GROUP_LIST)
+    return query_dicts(db_path, schema_match(db_path).sql("group_list"))
 
 
 def get_gps_locations(db_path: Path) -> list[dict]:
-    return query_dicts(db_path, q.GPS_LOCATIONS)
+    return query_dicts(db_path, schema_match(db_path).sql("gps_locations"))
+
+
+def get_blocked_contacts(db_path: Path) -> list[dict]:
+    """Raises UnsupportedCapabilityError on schema generations that keep the
+    block list in a companion database (wa.db)."""
+    return query_dicts(db_path, schema_match(db_path).sql("blocked_contacts"))
 
 
 def _in_clause(count: int) -> str:

@@ -1,15 +1,31 @@
 """Backup discovery and evidence integrity."""
 
 from dataclasses import asdict
+from pathlib import Path
 
 from fastapi import APIRouter
 
 from forensicwace_core.backups import android, ios
 from forensicwace_core.config import get_settings
+from forensicwace_core.exceptions import UnknownSchemaError
+from forensicwace_core.schema_registry import resolve
 
 from ..schemas import AndroidBackup, DatabaseFingerprint, IosBackup
 
 router = APIRouter(prefix="/backups", tags=["backups"])
+
+
+def _schema_info(db_path: Path, platform: str) -> dict:
+    """Schema summary for the detail views; unknown schemas are reported
+    inline (with the structural inventory) instead of failing the endpoint."""
+    try:
+        return resolve(db_path, platform).summary()
+    except UnknownSchemaError as exc:
+        return {
+            "error": str(exc),
+            "user_version": exc.user_version,
+            "tables": exc.tables,
+        }
 
 
 @router.get("/ios", response_model=list[IosBackup])
@@ -30,6 +46,7 @@ def ios_backup_detail(udid: str):
     return {
         "info": asdict(info) if info else None,
         "database": DatabaseFingerprint(**ios.database_fingerprint(backup_dir)),
+        "schema": _schema_info(ios.chatstorage_path(backup_dir), "ios"),
     }
 
 
@@ -40,4 +57,5 @@ def android_backup_detail(folder: str, db: str = "msgstore.db"):
         "folder": folder,
         "db_file": db,
         "database": DatabaseFingerprint(**android.database_fingerprint(db_path)),
+        "schema": _schema_info(db_path, "android"),
     }

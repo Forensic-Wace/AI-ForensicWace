@@ -19,3 +19,29 @@ class ExtractionError(ForensicWaceError):
 
 class ConfigurationError(ForensicWaceError):
     """A required setting is missing for the requested operation."""
+
+
+class UnknownSchemaError(ForensicWaceError):
+    """No schema descriptor matches the evidence database.
+
+    Carries the fingerprint inventory so the error can be turned into an
+    actionable report (and into a schema-support issue).
+    """
+
+    def __init__(self, platform: str, user_version: int, tables: dict[str, list[str]]):
+        self.platform = platform
+        self.user_version = user_version
+        self.tables = tables
+        super().__init__(
+            f"No known {platform} WhatsApp schema matches this database "
+            f"(user_version={user_version}, {len(tables)} tables/views found)"
+        )
+
+
+class UnsupportedCapabilityError(ForensicWaceError):
+    """The matched schema descriptor does not provide the requested query."""
+
+    def __init__(self, capability: str, descriptor_id: str):
+        self.capability = capability
+        self.descriptor_id = descriptor_id
+        super().__init__(f"Schema {descriptor_id!r} does not support {capability!r}")
