@@ -9,6 +9,9 @@ COPY frontend/ .
 RUN npm run build
 
 FROM nginx:1.27-alpine
-COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
+# The entrypoint renders templates with envsubst; API_UPSTREAM selects the
+# API backend (overridden by the Helm chart with the release service name).
+ENV API_UPSTREAM=api:8080
+COPY frontend/nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /build/dist /usr/share/nginx/html
 EXPOSE 80

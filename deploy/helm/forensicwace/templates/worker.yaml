@@ -1,0 +1,104 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "fw.fullname" . }}-worker
+  labels:
+    {{- include "fw.labels" . | nindent 4 }}
+    app.kubernetes.io/component: worker
+spec:
+  {{- if not .Values.worker.keda.enabled }}
+  replicas: {{ .Values.worker.replicas }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "fw.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: worker
+  template:
+    metadata:
+      labels:
+        {{- include "fw.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: worker
+    spec:
+      {{- with .Values.image.pullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      # Let running analyses finish before the pod is killed (acks_late still
+      # guarantees redelivery if this deadline is exceeded).
+      terminationGracePeriodSeconds: 300
+      containers:
+        - name: worker
+          image: "{{ .Values.image.registry }}/{{ .Values.worker.image }}:{{ include "fw.imageTag" . }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["celery", "-A", "forensicwace_worker.celery_app", "worker"]
+          args:
+            - "-Q"
+            - {{ .Values.worker.queues | quote }}
+            - "--concurrency={{ .Values.worker.concurrency }}"
+            - "--loglevel=INFO"
+          envFrom:
+            - secretRef:
+                name: {{ include "fw.fullname" . }}
+          env:
+            {{- include "fw.sharedEnv" . | nindent 12 }}
+          volumeMounts:
+            - name: evidence
+              mountPath: /data
+              readOnly: true
+          resources:
+            {{- toYaml .Values.worker.resources | nindent 12 }}
+      volumes:
+        - name: evidence
+          persistentVolumeClaim:
+            claimName: {{ include "fw.evidenceClaim" . }}
+{{- if .Values.worker.keda.enabled }}
+---
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: {{ include "fw.fullname" . }}-rabbitmq
+  labels:
+    {{- include "fw.labels" . | nindent 4 }}
+spec:
+  secretTargetRef:
+    - parameter: host
+      name: {{ include "fw.fullname" . }}
+      key: kedaBrokerHost
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ include "fw.fullname" . }}-worker
+  labels:
+    {{- include "fw.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    name: {{ include "fw.fullname" . }}-worker
+  minReplicaCount: {{ .Values.worker.keda.minReplicas }}
+  maxReplicaCount: {{ .Values.worker.keda.maxReplicas }}
+  pollingInterval: {{ .Values.worker.keda.pollingInterval }}
+  cooldownPeriod: {{ .Values.worker.keda.cooldownPeriod }}
+  triggers:
+    # Queue depth is the honest scaling signal for batch forensic workloads.
+    - type: rabbitmq
+      metadata:
+        queueName: text
+        mode: QueueLength
+        value: {{ .Values.worker.keda.queueLength | quote }}
+      authenticationRef:
+        name: {{ include "fw.fullname" . }}-rabbitmq
+    - type: rabbitmq
+      metadata:
+        queueName: media
+        mode: QueueLength
+        value: {{ .Values.worker.keda.queueLength | quote }}
+      authenticationRef:
+        name: {{ include "fw.fullname" . }}-rabbitmq
+    - type: rabbitmq
+      metadata:
+        queueName: control
+        mode: QueueLength
+        value: "1"
+      authenticationRef:
+        name: {{ include "fw.fullname" . }}-rabbitmq
+{{- end }}

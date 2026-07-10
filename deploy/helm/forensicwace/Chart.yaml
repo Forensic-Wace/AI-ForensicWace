@@ -1,0 +1,13 @@
+apiVersion: v2
+name: forensicwace
+description: >-
+  Forensic Wace — AI-powered WhatsApp forensic analysis platform.
+  Stateless API (FastAPI), Celery analysis workers autoscaled by KEDA on
+  RabbitMQ queue depth, React frontend, optional in-cluster PostgreSQL and
+  RabbitMQ.
+type: application
+version: 0.1.0
+appVersion: "2.0.0a1"
+keywords: [forensics, whatsapp, dfir]
+sources:
+  - https://github.com/Forensic-Wace/AI-ForensicWace

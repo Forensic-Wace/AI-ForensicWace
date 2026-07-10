@@ -45,6 +45,23 @@ jobs:
             exit 1
           fi
 
+  helm:
+    name: Helm chart lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+      - run: helm lint deploy/helm/forensicwace
+      - name: Render templates (default + keda + external infra)
+        run: |
+          helm template fw deploy/helm/forensicwace > /dev/null
+          helm template fw deploy/helm/forensicwace --set worker.keda.enabled=true > /dev/null
+          helm template fw deploy/helm/forensicwace \
+            --set postgresql.enabled=false --set rabbitmq.enabled=false \
+            --set postgresql.externalUrl=postgresql+psycopg2://u:p@h:5432/db \
+            --set rabbitmq.externalUrl=amqp://u:p@h:5672// \
+            --set ingress.enabled=true > /dev/null
+
   tests:
     name: Tests (pytest)
     runs-on: ubuntu-latest

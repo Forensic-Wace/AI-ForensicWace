@@ -1,0 +1,17 @@
+{{- if not .Values.evidence.existingClaim }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "fw.fullname" . }}-evidence
+  labels:
+    {{- include "fw.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    {{- toYaml .Values.evidence.accessModes | nindent 4 }}
+  {{- with .Values.evidence.storageClass }}
+  storageClassName: {{ . }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.evidence.size }}
+{{- end }}

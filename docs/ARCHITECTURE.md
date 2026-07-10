@@ -276,7 +276,7 @@ working stack on a laptop; `.env.example` documents every variable.
 | **2. React frontend** ✅ | `frontend/` SPA (React+Vite+TS), typed API client, nginx image | Feature parity with Jinja UI; legacy Flask monolith deleted |
 | **3. Async pipeline** ✅ | RabbitMQ + Celery workers; stage queues (control/media/text); SSE progress; thread fallback without broker | Analysis survives api restarts (acks_late); retry ×3 + fw.dead DLQ; failures visible in UI |
 | **4. Schema registry** ✅ | §4 fingerprinting + query packs (schemas/whatsapp) + synthetic fixtures + CI matrix | Current iOS/Android schemas ported to packs; unknown schema yields actionable report (API 422 + UI inventory) |
-| **5. Kubernetes** | Helm chart + KEDA autoscaling + observability | Deploys on a stock k3s/EKS cluster; workers scale on queue depth in a load test |
+| **5. Kubernetes** ✅ | Helm chart (deploy/helm/forensicwace) + KEDA ScaledObject on media/text queue depth + HPA (api) + /metrics | Deploys on a stock k3s/EKS cluster; workers scale on queue depth. Evidence still needs a RWX volume — S3/MinIO storage is the follow-up that removes it |
 
 Phases 3 and 4 are independent and can run in parallel. Each phase is a normal PR
 series on `main` — no long-lived rewrite branch.

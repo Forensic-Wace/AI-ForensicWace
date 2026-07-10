@@ -1,0 +1,119 @@
+# Default values for the forensicwace chart.
+
+image:
+  registry: ghcr.io/forensic-wace
+  # tag defaults to the chart appVersion
+  tag: ""
+  pullPolicy: IfNotPresent
+  pullSecrets: []
+
+api:
+  image: forensicwace-api
+  replicas: 2
+  resources:
+    requests: { cpu: 250m, memory: 512Mi }
+    limits: { cpu: "1", memory: 1Gi }
+  hpa:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 70
+
+worker:
+  image: forensicwace-worker
+  # Baseline replicas when KEDA is disabled
+  replicas: 2
+  queues: control,media,text
+  concurrency: 4
+  resources:
+    requests: { cpu: 500m, memory: 1Gi }
+    limits: { cpu: "2", memory: 4Gi }
+  keda:
+    # Requires KEDA installed in the cluster: https://keda.sh/docs/latest/deploy/
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 10
+    # Target queue depth per replica (media + text queues)
+    queueLength: 20
+    pollingInterval: 15
+    cooldownPeriod: 120
+
+frontend:
+  enabled: true
+  image: forensicwace-frontend
+  replicas: 1
+  resources:
+    requests: { cpu: 50m, memory: 64Mi }
+    limits: { cpu: 200m, memory: 128Mi }
+
+ingress:
+  enabled: false
+  className: ""
+  host: forensicwace.local
+  annotations: {}
+  tls: []
+
+# Evidence extractions volume, mounted at /data by api and workers.
+# NOTE: with more than one node this must be ReadWriteMany (NFS, EFS, ...);
+# object storage (S3/MinIO) support is on the roadmap to remove this need.
+evidence:
+  existingClaim: ""
+  size: 50Gi
+  storageClass: ""
+  accessModes: [ReadWriteMany]
+
+postgresql:
+  # In-cluster single-node PostgreSQL (fine for labs). For production point
+  # externalUrl to a managed instance and set enabled: false.
+  enabled: true
+  image: postgres:16-alpine
+  auth:
+    username: forensicwace
+    password: forensicwace
+    database: forensic_wace
+  persistence:
+    size: 10Gi
+    storageClass: ""
+  resources:
+    requests: { cpu: 250m, memory: 256Mi }
+    limits: { cpu: "1", memory: 1Gi }
+  # Used when enabled=false, e.g. postgresql+psycopg2://user:pass@host:5432/db
+  externalUrl: ""
+
+rabbitmq:
+  enabled: true
+  image: rabbitmq:3.13-management-alpine
+  auth:
+    username: forensicwace
+    password: forensicwace
+  persistence:
+    size: 5Gi
+    storageClass: ""
+  resources:
+    requests: { cpu: 250m, memory: 256Mi }
+    limits: { cpu: "1", memory: 1Gi }
+  # Used when enabled=false. Celery URL, default vhost: amqp://user:pass@host:5672//
+  externalUrl: ""
+  # KEDA scaler connection (single trailing slash = default vhost)
+  externalKedaHost: ""
+
+# Analyzer credentials — injected into api and worker as FW_* env vars via a
+# Secret. Set only what you use; use --set-file / external secret managers in
+# real deployments instead of committing values files.
+analyzerSecrets: {}
+  # FW_HF_TOKEN: hf_...
+  # FW_OPENAI_API_KEY: sk-proj-...
+  # FW_OPENAI_ASSISTANT_ID: asst_...
+  # FW_MS_PII_ENDPOINT: https://region.cognitiveservices.azure.com/
+  # FW_MS_PII_KEY: ...
+  # FW_MS_S2T_KEY: ...
+  # FW_MS_S2T_REGION: eastus
+  # FW_MS_CV_ENDPOINT: ...
+  # FW_MS_CV_KEY: ...
+
+# Plain (non-secret) FW_* environment for api and worker, e.g. analyzer
+# sidecar endpoints and toggles.
+extraEnv: {}
+  # FW_WHISPER_ENDPOINT: http://whisper.analyzers.svc:9000/asr
+  # FW_TESSERACT_ENDPOINT: http://tesseract.analyzers.svc:8884/v1/ocr
+  # FW_USE_MS_PII: "true"

@@ -41,8 +41,9 @@ architecture and roadmap live in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
      └── analyzer sidecars  DeepPass · Whisper · Tesseract · LAVIS (optional)
 ```
 
-Next phases: WhatsApp schema-version registry, Helm chart + KEDA autoscaling
-on queue depth. See the [roadmap](docs/ARCHITECTURE.md#9-roadmap).
+All six roadmap phases are complete — see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+for the architecture, the WhatsApp schema registry design, and follow-up work
+(S3/MinIO evidence storage, multi-user auth, Alembic migrations).
 
 ## Quick start (Docker)
 
@@ -64,6 +65,23 @@ docker compose -f deploy/compose/docker-compose.yml --profile core --profile ana
 
 DeepPass and LAVIS require a local image build — see the commented services in
 [deploy/compose/docker-compose.yml](deploy/compose/docker-compose.yml).
+
+## Kubernetes (production / scale)
+
+A Helm chart deploys the whole platform with autoscaling: HPA on the API and
+**KEDA scaling the analysis workers on RabbitMQ queue depth** (one task per
+message: big analyses fan out, workers scale up, queues drain, workers scale
+back down). Prometheus metrics are exposed at `/metrics`.
+
+```bash
+helm install forensicwace deploy/helm/forensicwace \
+  --namespace forensicwace --create-namespace \
+  --set image.registry=<your-registry> \
+  --set worker.keda.enabled=true
+```
+
+See [deploy/helm/forensicwace/README.md](deploy/helm/forensicwace/README.md)
+for prerequisites (KEDA, RWX storage for evidence) and all values.
 
 ## Local development
 

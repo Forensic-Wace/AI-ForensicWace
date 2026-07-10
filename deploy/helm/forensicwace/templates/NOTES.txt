@@ -1,0 +1,34 @@
+Forensic Wace deployed.
+
+Web UI:
+{{- if .Values.ingress.enabled }}
+  http{{ if .Values.ingress.tls }}s{{ end }}://{{ .Values.ingress.host }}/
+{{- else if .Values.frontend.enabled }}
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "fw.fullname" . }}-frontend 3000:80
+  -> http://localhost:3000
+{{- end }}
+
+API docs:
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "fw.fullname" . }}-api 8080:8080
+  -> http://localhost:8080/docs
+
+Evidence volume: copy extractions into the '{{ include "fw.evidenceClaim" . }}' PVC:
+  data/device_extractions_IOS/<UDID>/...
+  data/device_extractions_Android/<extraction>/msgstore.db
+
+{{- if .Values.worker.keda.enabled }}
+Worker autoscaling: KEDA scales {{ include "fw.fullname" . }}-worker between
+{{ .Values.worker.keda.minReplicas }} and {{ .Values.worker.keda.maxReplicas }} replicas on the depth of the
+media/text queues (target {{ .Values.worker.keda.queueLength }} msgs/replica).
+Watch it live during an analysis:
+  kubectl -n {{ .Release.Namespace }} get hpa,scaledobject,pods -w
+{{- else }}
+NOTE: worker.keda.enabled=false — workers run at a fixed {{ .Values.worker.replicas }} replicas.
+Install KEDA (https://keda.sh/docs/latest/deploy/) and set worker.keda.enabled=true
+to autoscale on queue depth.
+{{- end }}
+
+{{- if .Values.postgresql.enabled }}
+WARNING: the in-cluster single-node PostgreSQL is intended for labs; for
+production use a managed instance (postgresql.enabled=false + externalUrl).
+{{- end }}

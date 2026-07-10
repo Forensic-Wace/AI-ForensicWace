@@ -10,6 +10,7 @@ dependencies = [
     "uvicorn[standard]>=0.29",
     "python-multipart>=0.0.9",
     "celery>=5.4",
+    "prometheus-fastapi-instrumentator>=7.0",
     # forensicwace-core is installed from the monorepo path:
     #   pip install -e libs/forensicwace_core -e services/api
 ]

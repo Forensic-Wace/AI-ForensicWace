@@ -10,6 +10,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from forensicwace_core.config import get_settings
 from forensicwace_core.exceptions import (
@@ -64,6 +65,10 @@ def create_app() -> FastAPI:
         app.add_exception_handler(exc_type, _domain_error_handler(status_code))
     app.add_exception_handler(UnknownSchemaError, _unknown_schema_handler)
     app.add_exception_handler(UnsupportedCapabilityError, _unsupported_capability_handler)
+
+    # Prometheus metrics at /metrics (scraped via the pod annotations set by
+    # the Helm chart).
+    Instrumentator(excluded_handlers=["/metrics", "/healthz", "/readyz"]).instrument(app).expose(app)
 
     app.include_router(health.router)
     prefix = "/api/v1"
