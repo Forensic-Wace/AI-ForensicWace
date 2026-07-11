@@ -10,6 +10,7 @@ dependencies = [
     "pydantic>=2.7",
     "pydantic-settings>=2.2",
     "sqlalchemy>=2.0",
+    "alembic>=1.13",
     "httpx>=0.27",
     "reportlab>=4.0",
     "rfc3161ng>=2.1",
@@ -37,3 +38,6 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 include = ["forensicwace_core*"]
+
+[tool.setuptools.package-data]
+forensicwace_core = ["resultsdb/migrations/script.py.mako"]

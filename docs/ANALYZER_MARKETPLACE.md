@@ -139,7 +139,7 @@ analyzer containers. Third-party analyzer = third-party code seeing evidence.
 ### Phase A — contract + dynamic registry ✅ *(shipped 2026-07-11)*
 
 - [x] contract v1 frozen: [analyzer-contract.md](analyzer-contract.md) + pydantic models (`analysis/contract.py`) + generated JSON Schemas in `schemas/analyzer/` (sync enforced by test)
-- [x] `analyzers` table (§4); DDL rides `init_db` create_all + column reconciliation (Alembic remains a §7-roadmap follow-up)
+- [x] `analyzers` table (§4); DDL now under Alembic (baseline `0001` freezes the phase-7A schema; `init_db` runs `upgrade head` and adopts pre-Alembic databases)
 - [x] generic HTTP adapter (`analysis/analyzers/http_analyzer.py`); capability-based resolution in `analysis/registry.py` — `S2T`/`image_OCR` survive as legacy aliases expanding to concrete keys
 - [x] built-ins seeded as `type=builtin` rows at API startup — **10** of them: the media providers (whisper, microsoft_s2t, tesseract, lavis, microsoft_vision) became first-class analyzers, not settings-picked
 - [x] REST: `GET /analyzers`, `GET /analyzers/status` (same URL as before), `POST /analyzers` (BYO container, manifest fetched and authoritative), `PATCH /analyzers/{key}`, `DELETE /analyzers/{key}` (builtin → 409, disable instead)

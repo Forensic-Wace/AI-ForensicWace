@@ -234,7 +234,7 @@ working stack on a laptop; `.env.example` documents every variable.
 
 - 12-factor: all config via **environment variables** (pydantic-settings), `.env` for
   local dev. `config.ini` is removed; a small shim can translate it during migration.
-- PostgreSQL migrations managed with **Alembic** from day one.
+- PostgreSQL migrations managed with **Alembic** (baseline `0001` = phase-7A schema; `init_db` runs `upgrade head` and adopts pre-Alembic databases via guarded operations).
 - Add `evidence` / `case` tables: today the extraction folders on disk are the implicit
   registry; they become first-class records (path/S3 key, hashes SHA256+MD5 at intake,
   fingerprint id, chain-of-custody notes).

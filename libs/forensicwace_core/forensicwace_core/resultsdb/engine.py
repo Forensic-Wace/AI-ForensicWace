@@ -40,26 +40,23 @@ def dispose_engine() -> None:
 
 
 def init_db() -> None:
-    """Create all tables and reconcile late-added columns.
+    """Bring the results database to the current schema (Alembic).
 
-    The column reconciliation is a stopgap until Alembic migrations land: it
-    adds missing nullable/counter columns to pre-existing databases.
+    Runs ``alembic upgrade head`` programmatically. The baseline migration
+    adopts pre-Alembic databases (guarded creates plus reconciliation of the
+    columns the old ``create_all`` stopgap used to add). Concurrent replicas
+    starting together serialize on a Postgres advisory lock (see env.py).
     """
-    from sqlalchemy import inspect, text
+    from pathlib import Path
 
-    from . import models  # noqa: F401 — register mappings
+    from alembic import command
+    from alembic.config import Config
 
     engine = get_engine()
-    Base.metadata.create_all(engine)
-
-    inspector = inspect(engine)
-    with engine.begin() as conn:
-        for table in Base.metadata.sorted_tables:
-            existing = {col["name"] for col in inspector.get_columns(table.name)}
-            for column in table.columns:
-                if column.name not in existing:
-                    ddl = f'ALTER TABLE "{table.name}" ADD COLUMN "{column.name}" {column.type.compile(engine.dialect)}'
-                    conn.execute(text(ddl))
+    config = Config()
+    config.set_main_option("script_location", str(Path(__file__).parent / "migrations"))
+    config.attributes["connection"] = engine
+    command.upgrade(config, "head")
 
 
 @contextmanager
