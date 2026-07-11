@@ -295,6 +295,7 @@ export const api = {
     }),
   logout: () => fetch(`${BASE}/auth/logout`, { method: "POST" }).then(() => undefined),
   me: () => request<Me>("/auth/me"),
+  authProviders: () => request<{ password: boolean; oidc: boolean }>("/auth/providers"),
 
   listUsers: () => request<UserAccount[]>("/users"),
   createUser: (username: string, password: string, role: string) =>

@@ -38,6 +38,16 @@ spec:
                 name: {{ include "fw.fullname" . }}
           env:
             {{- include "fw.sharedEnv" . | nindent 12 }}
+            {{- if .Values.auth.oidc.issuer }}
+            - name: FW_OIDC_ISSUER
+              value: {{ .Values.auth.oidc.issuer | quote }}
+            - name: FW_OIDC_CLIENT_ID
+              value: {{ .Values.auth.oidc.clientId | quote }}
+            {{- with .Values.auth.oidc.publicUrl }}
+            - name: FW_PUBLIC_URL
+              value: {{ . | quote }}
+            {{- end }}
+            {{- end }}
           volumeMounts:
             # writable: browser uploads stage under /data/staging and hydrate
             # working copies into the extraction roots

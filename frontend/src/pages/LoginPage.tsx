@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { api } from "../api/client";
 import { useAuth } from "../auth";
@@ -10,6 +10,14 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [ssoAvailable, setSsoAvailable] = useState(false);
+
+  useEffect(() => {
+    api
+      .authProviders()
+      .then((p) => setSsoAvailable(p.oidc))
+      .catch(() => setSsoAvailable(false));
+  }, []);
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -47,6 +55,16 @@ export default function LoginPage() {
         <button type="submit" disabled={!username || !password || busy}>
           {busy ? "Signing in…" : "Sign in"}
         </button>
+        {ssoAvailable && (
+          <>
+            <p className="muted" style={{ textAlign: "center", margin: "0.5rem 0" }}>
+              or
+            </p>
+            <a className="button secondary" href="/api/v1/auth/oidc/login" style={{ textAlign: "center" }}>
+              Sign in with SSO
+            </a>
+          </>
+        )}
       </form>
     </div>
   );

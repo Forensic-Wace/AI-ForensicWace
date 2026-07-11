@@ -21,9 +21,11 @@ The following are treated as security issues, not just bugs:
 
 ## Deployment expectations
 
-The platform enforces **multi-user authentication** (local accounts, argon2id
-passwords, JWT session cookie) with two roles: `analyst` and `admin` (user
-management and analyzer-registry changes are admin-only). Operators must:
+The platform enforces **multi-user authentication** (local accounts with
+argon2id passwords and optional OIDC single sign-on, JWT session cookie) with
+two roles: `analyst` and `admin` (user management and analyzer-registry
+changes are admin-only), plus **per-case ACLs** (a project is visible to its
+owner, operators it was shared with, and admins). Operators must:
 
 - set a strong `FW_JWT_SECRET` (>= 32 chars) and override the bootstrap
   `FW_ADMIN_PASSWORD` — the compose/Helm defaults are lab-grade placeholders;

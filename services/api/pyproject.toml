@@ -9,8 +9,9 @@ dependencies = [
     "fastapi>=0.111",
     "uvicorn[standard]>=0.29",
     "python-multipart>=0.0.9",
-    "PyJWT>=2.8",
+    "PyJWT[crypto]>=2.8",  # [crypto]: RS256/ES256 ID-token validation (OIDC)
     "argon2-cffi>=23.1",
+    "httpx>=0.27",
     "celery>=5.4",
     "prometheus-fastapi-instrumentator>=7.0",
     # forensicwace-core is installed from the monorepo path:

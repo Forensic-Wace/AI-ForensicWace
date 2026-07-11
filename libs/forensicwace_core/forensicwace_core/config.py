@@ -56,6 +56,22 @@ class Settings(BaseSettings):
     admin_username: Optional[str] = None  # bootstrap admin, created at startup
     admin_password: Optional[str] = None
 
+    # --- Single sign-on (OIDC authorization-code flow) ----------------------
+    # Optional second login method. Set issuer + client id/secret to enable;
+    # accounts are auto-provisioned on first SSO login with ``analyst`` role
+    # (promote to admin locally). ``FW_PUBLIC_URL`` is the browser-facing
+    # origin used to build the redirect URI behind a reverse proxy.
+    oidc_issuer: Optional[str] = None
+    oidc_client_id: Optional[str] = None
+    oidc_client_secret: Optional[str] = None
+    oidc_scopes: str = "openid profile email"
+    oidc_username_claim: str = "preferred_username"
+    public_url: Optional[str] = None
+
+    @property
+    def oidc_enabled(self) -> bool:
+        return bool(self.oidc_issuer and self.oidc_client_id and not self.auth_disabled)
+
     # --- Results database (PostgreSQL) ------------------------------------
     database_url: Optional[str] = None
 

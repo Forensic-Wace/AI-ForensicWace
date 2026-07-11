@@ -44,8 +44,11 @@ architecture and roadmap live in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 All seven roadmap phases are complete — see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 for the architecture, the WhatsApp schema registry design, and follow-up work.
-Multi-user authentication (JWT + roles), Alembic migrations and an append-only
-audit log shipped after phase 7 — login with the FW_ADMIN_* bootstrap account.
+Multi-user authentication (JWT + roles, optional OIDC single sign-on),
+per-case ACLs, Alembic migrations and an append-only audit log shipped after
+phase 7 — login with the FW_ADMIN_* bootstrap account. The AI analysis
+pipeline covers both Android (msgstore.db) and iOS (ChatStorage.sqlite)
+evidence.
 
 ## Quick start (Docker)
 

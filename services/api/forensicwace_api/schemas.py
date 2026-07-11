@@ -17,6 +17,13 @@ class MeOut(BaseModel):
     auth_disabled: bool = False
 
 
+class ProvidersOut(BaseModel):
+    """Login methods available to the login page."""
+
+    password: bool = True
+    oidc: bool = False
+
+
 class UserCreate(BaseModel):
     username: str = Field(min_length=2, max_length=64, pattern=r"^[a-zA-Z0-9._-]+$")
     password: str = Field(min_length=8)

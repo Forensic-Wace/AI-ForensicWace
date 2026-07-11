@@ -133,6 +133,14 @@ auth:
   adminUsername: admin
   adminPassword: forensicwace
   cookieSecure: false
+  # Optional OIDC single sign-on (authorization-code flow). Set issuer +
+  # clientId (+ clientSecret) to show "Sign in with SSO" on the login page.
+  # publicUrl is the browser-facing origin (used for the redirect URI).
+  oidc:
+    issuer: ""
+    clientId: ""
+    clientSecret: ""
+    publicUrl: ""
 
 # Analyzer credentials — injected into api and worker as FW_* env vars via a
 # Secret. Set only what you use; use --set-file / external secret managers in
