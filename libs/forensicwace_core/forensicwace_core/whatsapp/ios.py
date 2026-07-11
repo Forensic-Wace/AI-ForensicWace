@@ -6,13 +6,16 @@ the statements. Manifest.db lookups are iOS-backup plumbing, not WhatsApp
 schema, so they stay in :mod:`manifest_queries`.
 """
 
+from datetime import datetime
 from pathlib import Path
 
 from ..backups.ios import chatstorage_path, manifest_db_path
-from ..constants import IOS_MESSAGE_TYPE_FILTERS, WHATSAPP_IOS_DOMAIN, Platform
+from ..constants import IOS_MESSAGE_TYPE_FILTERS, IOS_TYPE_CODES, WHATSAPP_IOS_DOMAIN, Platform
 from ..schema_registry import SchemaMatch, resolve
+from ..utils.timeconv import APPLE_EPOCH_OFFSET
+from . import ios_queries as q
 from . import manifest_queries
-from .sqlite import query_dicts
+from .sqlite import open_readonly, query_dicts
 
 
 def schema_match(backup_dir: Path) -> SchemaMatch:
@@ -66,6 +69,89 @@ def filter_messages_by_type(messages: list[dict], type_filter: str | None) -> li
     if allowed is None:
         return messages
     return [m for m in messages if m.get("ZMESSAGETYPE") in allowed]
+
+
+def _in_clause(count: int) -> str:
+    return ", ".join("?" for _ in range(count))
+
+
+def get_filtered_messages(
+    db_path: Path,
+    date_from: datetime | None = None,
+    date_to: datetime | None = None,
+    include_received: bool = True,
+    include_sent: bool = True,
+    contacts: list[str] | None = None,
+    groups: list[str] | None = None,
+    message_types: list[str] | None = None,
+) -> list[dict]:
+    """Messages selected for AI analysis, joined with their media metadata.
+
+    Each returned row has: chat_name, id, chat_id, from_me, timestamp (Unix
+    seconds), message_type (raw ZMESSAGETYPE code), text, media_local_path
+    (relative to ``Message/`` in the backup manifest), mime_type.
+
+    Sent messages carry no ZFROMJID in this schema generation, so direction is
+    derived from its presence.
+    """
+    contacts = [c for c in (contacts or []) if c]
+    groups = [g for g in (groups or []) if g]
+
+    conn = open_readonly(db_path)
+    try:
+        chat_names: dict[int, str] = {}
+        for contact in contacts:
+            for row in conn.execute(q.PRIVATE_SESSION_BY_JID, (f"%{contact[-10:]}%",)):
+                chat_names[row["Z_PK"]] = row["ZPARTNERNAME"]
+        if groups:
+            sql = q.GROUP_SESSIONS_BY_NAME.format(placeholders=_in_clause(len(groups)))
+            for row in conn.execute(sql, groups):
+                chat_names[row["Z_PK"]] = row["ZPARTNERNAME"]
+
+        if not chat_names:
+            return []
+
+        chat_ids = list(chat_names)
+        sql = q.MESSAGES_BASE.format(placeholders=_in_clause(len(chat_ids)))
+        params: list = list(chat_ids)
+
+        if date_from is not None and date_to is not None:
+            sql += " AND m.ZMESSAGEDATE >= ? AND m.ZMESSAGEDATE <= ?"
+            params += [date_from.timestamp() - APPLE_EPOCH_OFFSET, date_to.timestamp() - APPLE_EPOCH_OFFSET]
+
+        if include_received and not include_sent:
+            sql += " AND m.ZFROMJID IS NOT NULL"
+        elif include_sent and not include_received:
+            sql += " AND m.ZFROMJID IS NULL"
+
+        type_codes = [code for t in (message_types or []) for code in IOS_TYPE_CODES.get(t, ())]
+        if type_codes:
+            sql += f" AND m.ZMESSAGETYPE IN ({_in_clause(len(type_codes))})"
+            params += type_codes
+
+        sql += " ORDER BY m.ZCHATSESSION, m.ZMESSAGEDATE"
+
+        results = []
+        for row in conn.execute(sql, params):
+            media_meta = row["media_meta"]
+            results.append(
+                {
+                    "chat_name": chat_names.get(row["chat_id"]),
+                    "id": row["id"],
+                    "chat_id": row["chat_id"],
+                    "from_me": row["from_jid"] is None,
+                    "timestamp": (row["message_date"] or 0) + APPLE_EPOCH_OFFSET,
+                    "message_type": row["message_type"],
+                    "text": row["text"],
+                    "media_local_path": row["media_local_path"],
+                    # ZVCARDSTRING holds the MIME type on media items; on
+                    # contact-card messages it holds the vCard itself.
+                    "mime_type": media_meta if media_meta and "/" in media_meta and "\n" not in media_meta else None,
+                }
+            )
+        return results
+    finally:
+        conn.close()
 
 
 def find_media_file(backup_dir: Path, relative_path: str | None = None, profile_of: str | None = None) -> Path | None:

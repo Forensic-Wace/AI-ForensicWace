@@ -23,6 +23,14 @@ INSERT INTO ZWAMESSAGE VALUES (2, 1, 0, NULL, '390000000001@s.whatsapp.net', 700
 INSERT INTO ZWAMESSAGE VALUES (3, 2, 0, '390000000001@s.whatsapp.net', NULL, 700000200, 700000200, 'group message', NULL, 1);
 INSERT INTO ZWAMESSAGE VALUES (4, 1, 5, '390000000001@s.whatsapp.net', NULL, 700000300, 700000300, NULL, 1, NULL);
 INSERT INTO ZWAMEDIAITEM VALUES (1, NULL, 41.1171, 16.8719, NULL, NULL, NULL);
+
+-- Media messages for the analysis pipeline: a received voice note and a sent image
+INSERT INTO ZWAMESSAGE VALUES (5, 1, 3, '390000000001@s.whatsapp.net', NULL, 700000400, 700000400, NULL, 2, NULL);
+INSERT INTO ZWAMEDIAITEM VALUES (2, 12.0, NULL, NULL, NULL, 'audio/ogg; codecs=opus',
+                                 'Media/390000000001@s.whatsapp.net/a/b/audio1.opus');
+INSERT INTO ZWAMESSAGE VALUES (6, 1, 1, NULL, '390000000001@s.whatsapp.net', 700000500, 700000500, 'look at this', 3, NULL);
+INSERT INTO ZWAMEDIAITEM VALUES (3, NULL, NULL, NULL, NULL, 'image/jpeg',
+                                 'Media/390000000001@s.whatsapp.net/c/d/photo1.jpg');
 INSERT INTO ZWAGROUPMEMBER VALUES (1, '390000000001@s.whatsapp.net');
 INSERT INTO ZWACHATPUSHCONFIG VALUES (1, 'group1@g.us', NULL);
 INSERT INTO ZWABLACKLISTITEM VALUES (1, '390000000002@s.whatsapp.net');

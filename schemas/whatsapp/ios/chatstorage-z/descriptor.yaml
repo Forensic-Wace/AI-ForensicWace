@@ -28,4 +28,4 @@ queries:
 
 capabilities:
   media_extraction: true   # via Manifest.db (outside this pack)
-  analysis_pipeline: false # iOS analysis extraction not implemented yet
+  analysis_pipeline: true  # message selection in whatsapp/ios_queries.py

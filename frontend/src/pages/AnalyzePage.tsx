@@ -89,11 +89,6 @@ export default function AnalyzePage() {
   return (
     <>
       <h2>AI analysis</h2>
-      {platform === "ios" && (
-        <p className="muted">
-          Note: the analysis pipeline currently extracts messages from Android databases; iOS support is planned.
-        </p>
-      )}
       <ErrorBox message={chats.error ?? groups.error ?? installed.error ?? submitError} />
       <Loading active={chats.loading || groups.loading || installed.loading} />
 

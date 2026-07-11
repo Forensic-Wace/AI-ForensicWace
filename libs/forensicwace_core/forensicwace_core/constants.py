@@ -44,6 +44,37 @@ IOS_MESSAGE_TYPE_FILTERS: dict[str, tuple[int, ...]] = {
     "stickers": (IosMessageType.STICKER,),
 }
 
+# iOS ZWAMESSAGE.ZMESSAGETYPE values -> logical type (analysis pipeline)
+IOS_MESSAGE_TYPES: dict[int, str] = {
+    IosMessageType.TEXT: "text",
+    IosMessageType.IMAGE: "image",
+    IosMessageType.VIDEO: "video",
+    IosMessageType.AUDIO: "audio",
+    IosMessageType.CONTACT: "contact",
+    IosMessageType.POSITION: "location",
+    IosMessageType.GROUP_EVENT: "groupEvent",
+    IosMessageType.URL: "url",
+    IosMessageType.FILE: "file",
+    IosMessageType.GIF: "gif",
+    IosMessageType.STICKER: "sticker",
+    IosMessageType.ONE_TIME_IMAGE: "image",
+    IosMessageType.ONE_TIME_VIDEO: "video",
+}
+
+# Logical type -> iOS ZMESSAGETYPE values (for query filters). Keys mirror
+# ANDROID_TYPE_CODES so one request filter works on both platforms.
+IOS_TYPE_CODES: dict[str, tuple[int, ...]] = {
+    "text": (IosMessageType.TEXT,),
+    "image": (IosMessageType.IMAGE, IosMessageType.ONE_TIME_IMAGE),
+    "audio": (IosMessageType.AUDIO,),
+    "video": (IosMessageType.VIDEO, IosMessageType.ONE_TIME_VIDEO),
+    "gif": (IosMessageType.GIF,),
+    "location": (IosMessageType.POSITION,),
+    "groupEvent": (IosMessageType.GROUP_EVENT,),
+    "url": (IosMessageType.URL,),
+    "file": (IosMessageType.FILE,),
+}
+
 # Android message.message_type values -> logical type
 ANDROID_MESSAGE_TYPES: dict[int, str] = {
     0: "text",

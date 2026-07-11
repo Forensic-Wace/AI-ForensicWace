@@ -18,9 +18,9 @@ from ..constants import Platform
 from ..resultsdb import repositories
 from ..resultsdb.engine import session_scope
 from ..resultsdb.models import PII, Password, ProcessStatus, Text
-from ..whatsapp import android
+from ..whatsapp import android, ios
 from . import registry
-from .messages import from_android_rows
+from .messages import from_android_rows, from_ios_rows
 from .types import Message
 
 logger = logging.getLogger(__name__)
@@ -28,22 +28,24 @@ logger = logging.getLogger(__name__)
 
 def extract_messages(process: ProcessStatus) -> list[Message]:
     """Extract the messages selected by an analysis request."""
+    filters = dict(
+        date_from=process.date_from,
+        date_to=process.date_to,
+        include_received=bool(process.received),
+        include_sent=bool(process.sent),
+        contacts=(process.contacts or "").split(","),
+        groups=(process.groups or "").split(","),
+        message_types=[t for t in (process.msg_type or "").split(",") if t],
+    )
     if process.OS == Platform.ANDROID:
         backup_dir = get_settings().android_dir / process.extraction_name_udid
-        rows = android.get_filtered_messages(
-            Path(process.db_path),
-            date_from=process.date_from,
-            date_to=process.date_to,
-            include_received=bool(process.received),
-            include_sent=bool(process.sent),
-            contacts=(process.contacts or "").split(","),
-            groups=(process.groups or "").split(","),
-            message_types=[t for t in (process.msg_type or "").split(",") if t],
-        )
+        rows = android.get_filtered_messages(Path(process.db_path), **filters)
         return from_android_rows(rows, backup_dir)
-    # iOS analysis was never implemented in the legacy platform either; the
-    # request is accepted but yields no messages until the iOS path lands.
-    logger.warning("Analysis for platform %s is not implemented yet", process.OS)
+    if process.OS == Platform.IOS:
+        backup_dir = get_settings().ios_dir / process.extraction_name_udid
+        rows = ios.get_filtered_messages(Path(process.db_path), **filters)
+        return from_ios_rows(rows, backup_dir)
+    logger.warning("Analysis for platform %s is not supported", process.OS)
     return []
 
 
