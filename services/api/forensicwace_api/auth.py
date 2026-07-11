@@ -13,8 +13,6 @@ outstanding sessions instantly — worth far more than purity here.
 
 import logging
 import secrets
-import threading
-import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
@@ -22,10 +20,11 @@ import jwt
 from argon2 import PasswordHasher
 from argon2.exceptions import VerificationError
 from fastapi import Depends, HTTPException, Request, Response
+from sqlalchemy import func
 
 from forensicwace_core.config import get_settings
 from forensicwace_core.resultsdb.engine import session_scope
-from forensicwace_core.resultsdb.models import User
+from forensicwace_core.resultsdb.models import AuditLog, User
 
 logger = logging.getLogger(__name__)
 
@@ -39,8 +38,6 @@ FAILURE_WINDOW_SECONDS = 300
 _hasher = PasswordHasher()  # argon2id with library defaults
 
 _ephemeral_secret: str | None = None
-_failures: dict[str, list[float]] = {}
-_failures_lock = threading.Lock()
 
 
 @dataclass(frozen=True)
@@ -143,22 +140,41 @@ def require_admin(user: AuthUser = Depends(get_current_user)) -> AuthUser:
 
 
 def check_login_allowed(username: str) -> None:
-    now = time.monotonic()
-    with _failures_lock:
-        recent = [t for t in _failures.get(username, []) if now - t < FAILURE_WINDOW_SECONDS]
-        _failures[username] = recent
-        if len(recent) >= MAX_LOGIN_FAILURES:
-            raise HTTPException(status_code=429, detail="Too many failed attempts — retry later")
+    """Throttle by counting recent ``auth.login_failed`` audit entries.
 
-
-def record_login_failure(username: str) -> None:
-    with _failures_lock:
-        _failures.setdefault(username, []).append(time.monotonic())
-
-
-def reset_login_failures(username: str) -> None:
-    with _failures_lock:
-        _failures.pop(username, None)
+    The audit trail is the shared store, so the limit holds across API
+    replicas with no extra infrastructure. Failures older than the window —
+    or older than the account's last successful login — don't count. If the
+    audit table cannot be read the login proceeds: the credential check right
+    after needs the same database anyway.
+    """
+    now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(seconds=FAILURE_WINDOW_SECONDS)
+    try:
+        with session_scope() as session:
+            last_success = (
+                session.query(func.max(AuditLog.at))
+                .filter(AuditLog.action == "auth.login", AuditLog.username == username)
+                .scalar()
+            )
+            if last_success is not None:
+                if last_success.tzinfo is None:
+                    last_success = last_success.replace(tzinfo=timezone.utc)
+                cutoff = max(cutoff, last_success)
+            failures = (
+                session.query(func.count(AuditLog.id))
+                .filter(
+                    AuditLog.action == "auth.login_failed",
+                    AuditLog.resource == username,
+                    AuditLog.at > cutoff,
+                )
+                .scalar()
+            )
+    except Exception:
+        logger.warning("Login throttle check skipped — audit trail unreadable", exc_info=True)
+        return
+    if (failures or 0) >= MAX_LOGIN_FAILURES:
+        raise HTTPException(status_code=429, detail="Too many failed attempts — retry later")
 
 
 # --- Bootstrap -------------------------------------------------------------------

@@ -34,10 +34,6 @@ def client(tmp_path, monkeypatch):
         yield test_client
     _reset_runtime()
 
-    from forensicwace_api import auth
-
-    auth._failures.clear()
-
 
 def login(client, username, password="analyst-pw-1"):
     client.cookies.clear()

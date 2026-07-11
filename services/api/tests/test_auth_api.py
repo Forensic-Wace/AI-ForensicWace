@@ -34,10 +34,6 @@ def client(tmp_path, monkeypatch):
         yield test_client
     _reset_runtime()
 
-    from forensicwace_api import auth
-
-    auth._failures.clear()
-
 
 def login(client, username="admin", password="correct-horse-battery"):
     return client.post("/api/v1/auth/login", json={"username": username, "password": password})
@@ -184,3 +180,13 @@ def test_api_docs_require_a_session(client):
     login(client)
     assert client.get("/docs").status_code == 200
     assert "/api/v1/auth/login" in client.get("/openapi.json").json()["paths"]
+
+
+def test_successful_login_resets_the_throttle(client):
+    for _ in range(4):
+        assert login(client, password="wrong").status_code == 401
+    assert login(client).status_code == 200
+    # the failure counter restarted at the successful login
+    for _ in range(4):
+        assert login(client, password="wrong").status_code == 401
+    assert login(client).status_code == 200
