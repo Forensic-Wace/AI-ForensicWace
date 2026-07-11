@@ -27,10 +27,15 @@ management and analyzer-registry changes are admin-only). Operators must:
 
 - set a strong `FW_JWT_SECRET` (>= 32 chars) and override the bootstrap
   `FW_ADMIN_PASSWORD` — the compose/Helm defaults are lab-grade placeholders;
-- serve over TLS outside a trusted lab and set `FW_COOKIE_SECURE=true`;
+- serve over TLS outside a trusted lab (Helm: `ingress.tls` + cert-manager)
+  and set `FW_COOKIE_SECURE=true` — the API logs a startup warning otherwise;
 - never set `FW_AUTH_DISABLED=true` outside local single-user development;
 - remain responsible for network isolation and at-rest encryption of the
   results database (it contains PII by design).
+
+With authentication enabled, the interactive API docs (`/docs`) and the
+OpenAPI schema (`/openapi.json`) also require a session: the API surface is
+not advertised to anonymous clients.
 
 Prometheus `/metrics` and the health probes are unauthenticated by design:
 keep them cluster-internal.

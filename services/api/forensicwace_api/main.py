@@ -42,7 +42,13 @@ _ERROR_STATUS = {
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    if get_settings().database_url:
+    settings = get_settings()
+    if not settings.auth_disabled and not settings.cookie_secure:
+        logger.warning(
+            "FW_COOKIE_SECURE is off: session cookies are sent over plain HTTP. "
+            "Terminate TLS in front of the API and set FW_COOKIE_SECURE=true in production."
+        )
+    if settings.database_url:
         from forensicwace_core.analysis.registry import sync_builtin_analyzers
         from forensicwace_core.resultsdb.engine import init_db
 
@@ -56,12 +62,29 @@ async def lifespan(app: FastAPI):
 
 
 def create_app() -> FastAPI:
+    # With authentication on, the interactive docs and the OpenAPI schema
+    # require a session too: the API surface is not advertised to anonymous
+    # clients on a forensic deployment.
+    lock_docs = not get_settings().auth_disabled
     app = FastAPI(
         title="Forensic Wace API",
         description="WhatsApp forensic analysis platform — REST API",
         version="2.0.0a1",
         lifespan=lifespan,
+        docs_url=None if lock_docs else "/docs",
+        redoc_url=None,
+        openapi_url=None if lock_docs else "/openapi.json",
     )
+    if lock_docs:
+        from fastapi.openapi.docs import get_swagger_ui_html
+
+        @app.get("/openapi.json", include_in_schema=False, dependencies=[Depends(get_current_user)])
+        async def openapi_schema() -> JSONResponse:
+            return JSONResponse(app.openapi())
+
+        @app.get("/docs", include_in_schema=False, dependencies=[Depends(get_current_user)])
+        async def swagger_docs():
+            return get_swagger_ui_html(openapi_url="/openapi.json", title=f"{app.title} — docs")
 
     for exc_type, status_code in _ERROR_STATUS.items():
         app.add_exception_handler(exc_type, _domain_error_handler(status_code))

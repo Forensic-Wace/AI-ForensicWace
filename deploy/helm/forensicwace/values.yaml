@@ -51,6 +51,10 @@ ingress:
   className: ""
   host: forensicwace.local
   annotations: {}
+  # Production: terminate TLS here and set auth.cookieSecure=true, e.g.
+  #   tls:
+  #     - hosts: [forensicwace.example.org]
+  #       secretName: forensicwace-tls   # cert-manager or a provisioned cert
   tls: []
 
 # Evidence extractions volume, mounted at /data by api and workers.

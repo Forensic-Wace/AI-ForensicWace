@@ -176,3 +176,11 @@ def test_analysis_records_the_operator(client, tmp_path):
     with session_scope() as session:
         process = session.query(ProcessStatus).filter_by(process_id=submitted.json()["process_id"]).first()
         assert process.created_by == admin_id
+
+
+def test_api_docs_require_a_session(client):
+    assert client.get("/docs").status_code == 401
+    assert client.get("/openapi.json").status_code == 401
+    login(client)
+    assert client.get("/docs").status_code == 200
+    assert "/api/v1/auth/login" in client.get("/openapi.json").json()["paths"]
