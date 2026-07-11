@@ -169,17 +169,54 @@ services:
     ports:
       - "7865:8884"
 
+  # fw-analyzer/1 shims: expose the sidecars through the standard analyzer
+  # contract so they can be installed at runtime instead of via FW_* env:
+  #   curl -X POST http://localhost:8080/api/v1/analyzers \
+  #        -H 'Content-Type: application/json' -d '{"endpoint": "http://whisper-shim:9300"}'
+  #   curl ... -d '{"endpoint": "http://tesseract-shim:9300"}'
+  whisper-shim:
+    build:
+      context: ../..
+      dockerfile: services/analyzer-shim/Dockerfile
+    profiles: [analyzers-local]
+    environment:
+      FW_SHIM_TARGET: whisper
+      FW_SHIM_TARGET_URL: http://whisper:9000/asr
+    depends_on:
+      - whisper
+
+  tesseract-shim:
+    build:
+      context: ../..
+      dockerfile: services/analyzer-shim/Dockerfile
+    profiles: [analyzers-local]
+    environment:
+      FW_SHIM_TARGET: tesseract
+      FW_SHIM_TARGET_URL: http://tesseract:8884/v1/ocr
+    depends_on:
+      - tesseract
+
   # deeppass:
   #   build: ../../../DeepPass_RestApi   # git clone https://github.com/daniele96/DeepPass_RestApi
   #   profiles: [analyzers-local]
   #   ports:
   #     - "5000:5000"
+  # deeppass-shim:
+  #   build: { context: ../.., dockerfile: services/analyzer-shim/Dockerfile }
+  #   profiles: [analyzers-local]
+  #   environment: { FW_SHIM_TARGET: deeppass, FW_SHIM_TARGET_URL: "http://deeppass:5000" }
+  #   depends_on: [deeppass]
 
   # lavis:
   #   build: ../../../ImageCaption_lavis  # git clone https://github.com/daniele96/ImageCaption_lavis
   #   profiles: [analyzers-local]
   #   ports:
   #     - "7866:5000"
+  # lavis-shim:
+  #   build: { context: ../.., dockerfile: services/analyzer-shim/Dockerfile }
+  #   profiles: [analyzers-local]
+  #   environment: { FW_SHIM_TARGET: lavis, FW_SHIM_TARGET_URL: "http://lavis:5000" }
+  #   depends_on: [lavis]
 
 volumes:
   postgres-data:

@@ -150,7 +150,7 @@ analyzer containers. Third-party analyzer = third-party code seeing evidence.
 ### Phase B — catalog + marketplace UI
 
 - [ ] `catalog.json` format + signature verification; seed catalog with DeepPass, Whisper, Tesseract, LAVIS manifests
-- [ ] conform the four existing sidecars (proxy shim or upstream PR)
+- [x] conform the four existing sidecars — done via `services/analyzer-shim`: one env-configured proxy image (`FW_SHIM_TARGET` = deeppass | whisper | tesseract | lavis) translating fw-analyzer/1 into each sidecar's native API; wired into the compose `analyzers-local` profile, registered at runtime through `POST /analyzers`
 - [ ] Marketplace page: browse catalog, install (→ registry), configure (render `config_schema`), uninstall, health badges
 - [ ] trust-tier consent UX (`local` vs `cloud` clearly separated)
 

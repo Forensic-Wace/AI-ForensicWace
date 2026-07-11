@@ -138,3 +138,11 @@ curl -X POST http://localhost:8080/api/v1/analyzers \
 
 It now appears in `GET /api/v1/analyzers`, in the AI-analysis page checkboxes
 and on the status page; analyses can request its key like any built-in.
+
+## Reference implementation
+
+[`services/analyzer-shim`](../services/analyzer-shim/) is a complete
+conforming implementation: a single small image that wraps each historical
+sidecar (DeepPass, Whisper, Tesseract, LAVIS) in this contract, selected with
+`FW_SHIM_TARGET` + `FW_SHIM_TARGET_URL`. See the `analyzers-local` profile in
+[docker-compose.yml](../deploy/compose/docker-compose.yml) for the wiring.
