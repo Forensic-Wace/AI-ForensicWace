@@ -104,6 +104,27 @@ class Project(Base):
     created_by = Column(Integer)  # users.id of the operator
 
     backups = relationship("ProjectBackup", back_populates="project", cascade="all, delete-orphan")
+    members = relationship("ProjectMember", back_populates="project", cascade="all, delete-orphan")
+
+
+class ProjectMember(Base):
+    """Project sharing (ACL): an operator granted access to someone else's case.
+
+    The owner (``projects.created_by``) and admins are never listed here;
+    their access is implicit. Projects predating the ACL (owner NULL) stay
+    visible to every operator.
+    """
+
+    __tablename__ = "project_members"
+    __table_args__ = (UniqueConstraint("project_id", "user_id", name="uq_project_members"),)
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    project_id = Column(String(36), ForeignKey("projects.id"), nullable=False, index=True)
+    user_id = Column(Integer, nullable=False)
+    added_at = Column(DateTime(timezone=True))
+    added_by = Column(Integer)  # users.id of the granting operator
+
+    project = relationship("Project", back_populates="members")
 
 
 class ProjectBackup(Base):

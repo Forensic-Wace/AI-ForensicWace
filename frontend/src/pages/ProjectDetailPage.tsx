@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
-import { api, uploadProjectBackup, type Platform, type ProjectBackup } from "../api/client";
+import { api, uploadProjectBackup, type Platform, type ProjectBackup, type ProjectDetail } from "../api/client";
 import { ErrorBox, Loading } from "../components";
 import { useLoad } from "../hooks";
 
@@ -101,6 +101,69 @@ function UploadCard({ projectId, onUploaded }: { projectId: string; onUploaded: 
   );
 }
 
+function SharingCard({ project, onChanged }: { project: ProjectDetail; onChanged: () => void }) {
+  const [username, setUsername] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const share = async () => {
+    setError(null);
+    try {
+      await api.addProjectMember(project.id, username.trim());
+      setUsername("");
+      onChanged();
+    } catch (err) {
+      setError(String(err));
+    }
+  };
+
+  const unshare = async (userId: number) => {
+    setError(null);
+    try {
+      await api.removeProjectMember(project.id, userId);
+      onChanged();
+    } catch (err) {
+      setError(String(err));
+    }
+  };
+
+  return (
+    <div className="card">
+      <h3>Sharing</h3>
+      <p className="muted">
+        {project.owner ? `Case owner: ${project.owner}. ` : ""}
+        Only the owner, shared operators and admins can see this case.
+      </p>
+      <ErrorBox message={error} />
+      {project.members.length > 0 && (
+        <ul>
+          {project.members.map((m) => (
+            <li key={m.user_id} className="row">
+              <span>{m.username ?? `user #${m.user_id}`}</span>
+              {project.can_manage && (
+                <button className="button secondary" onClick={() => unshare(m.user_id)}>
+                  Remove
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      {project.can_manage && (
+        <div className="row">
+          <input
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="username to share with"
+          />
+          <button onClick={share} disabled={!username.trim()}>
+            Share
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ProjectDetailPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
@@ -148,14 +211,17 @@ export default function ProjectDetailPage() {
         <>
           <div className="row" style={{ justifyContent: "space-between" }}>
             <h2 style={{ marginBottom: 0 }}>Project: {data.name}</h2>
-            <button className="button secondary" onClick={deleteProject}>
-              Delete project
-            </button>
+            {data.can_manage && (
+              <button className="button secondary" onClick={deleteProject}>
+                Delete project
+              </button>
+            )}
           </div>
           {data.description && <p className="muted">{data.description}</p>}
           <ErrorBox message={actionError} />
 
           <UploadCard projectId={data.id} onUploaded={reload} />
+          <SharingCard project={data} onChanged={reload} />
 
           <h3>Backups</h3>
           {data.backups.length === 0 && <p className="muted">No backups uploaded yet.</p>}

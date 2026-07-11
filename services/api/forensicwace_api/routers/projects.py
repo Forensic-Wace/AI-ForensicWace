@@ -26,12 +26,19 @@ from forensicwace_core.config import get_settings
 from forensicwace_core.constants import Platform
 from forensicwace_core.resultsdb import repositories
 from forensicwace_core.resultsdb.engine import session_scope
-from forensicwace_core.resultsdb.models import Project, ProjectBackup
+from forensicwace_core.resultsdb.models import Project, ProjectBackup, ProjectMember, User
 from forensicwace_core.storage import get_object_storage
 
 from .. import audit
 from ..auth import AuthUser, get_current_user
-from ..schemas import ProjectBackupOut, ProjectCreate, ProjectDetailOut, ProjectOut
+from ..schemas import (
+    ProjectBackupOut,
+    ProjectCreate,
+    ProjectDetailOut,
+    ProjectMemberAdd,
+    ProjectMemberOut,
+    ProjectOut,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -69,6 +76,26 @@ def _to_project_out(project: Project) -> ProjectOut:
     )
 
 
+def _is_admin(user: AuthUser) -> bool:
+    return user.role == "admin"
+
+
+def _accessible_project(session, project_id: str, user: AuthUser) -> Project:
+    """The project, if the operator may see it. Non-members get the same 404
+    as a nonexistent case: the ACL also hides existence."""
+    project = repositories.get_project(session, project_id)
+    if project is None or not repositories.can_access_project(project, user.id, _is_admin(user)):
+        raise HTTPException(status_code=404, detail="Project not found")
+    return project
+
+
+def _manageable_project(session, project_id: str, user: AuthUser) -> Project:
+    project = _accessible_project(session, project_id, user)
+    if not repositories.can_manage_project(project, user.id, _is_admin(user)):
+        raise HTTPException(status_code=403, detail="Only the case owner or an admin can do this")
+    return project
+
+
 @router.post("", response_model=ProjectOut, status_code=201)
 def create_project(request: ProjectCreate, user: AuthUser = Depends(get_current_user)):
     project = Project(
@@ -87,21 +114,66 @@ def create_project(request: ProjectCreate, user: AuthUser = Depends(get_current_
 
 
 @router.get("", response_model=list[ProjectOut])
-def list_projects():
+def list_projects(user: AuthUser = Depends(get_current_user)):
     with session_scope() as session:
-        return [_to_project_out(p) for p in repositories.list_projects(session)]
+        return [
+            _to_project_out(p)
+            for p in repositories.list_projects(session)
+            if repositories.can_access_project(p, user.id, _is_admin(user))
+        ]
 
 
 @router.get("/{project_id}", response_model=ProjectDetailOut)
-def project_detail(project_id: str):
+def project_detail(project_id: str, user: AuthUser = Depends(get_current_user)):
     with session_scope() as session:
-        project = repositories.get_project(session, project_id)
-        if project is None:
-            raise HTTPException(status_code=404, detail="Project not found")
+        project = _accessible_project(session, project_id, user)
+        names = repositories.usernames_by_id(
+            session, [m.user_id for m in project.members] + ([project.created_by] if project.created_by else [])
+        )
         return ProjectDetailOut(
             **_to_project_out(project).model_dump(),
             backups=[_to_backup_out(b) for b in project.backups],
+            owner=names.get(project.created_by),
+            can_manage=repositories.can_manage_project(project, user.id, _is_admin(user)),
+            members=[
+                ProjectMemberOut(user_id=m.user_id, username=names.get(m.user_id), added_at=m.added_at)
+                for m in project.members
+            ],
         )
+
+
+@router.post("/{project_id}/members", response_model=ProjectMemberOut, status_code=201)
+def add_member(project_id: str, request: ProjectMemberAdd, user: AuthUser = Depends(get_current_user)):
+    """Share the case with another operator (owner or admin only)."""
+    with session_scope() as session:
+        project = _manageable_project(session, project_id, user)
+        target = session.query(User).filter(User.username == request.username).first()
+        if target is None or not target.is_active:
+            raise HTTPException(status_code=404, detail=f"No active user named {request.username!r}")
+        if target.id == project.created_by:
+            raise HTTPException(status_code=409, detail="That user owns this case")
+        if any(m.user_id == target.id for m in project.members):
+            raise HTTPException(status_code=409, detail="Case is already shared with that user")
+        member = ProjectMember(project_id=project.id, user_id=target.id, added_at=_now(), added_by=user.id)
+        session.add(member)
+        session.flush()
+        out = ProjectMemberOut(user_id=member.user_id, username=target.username, added_at=member.added_at)
+        name = project.name
+    audit.record(user, "project.shared", resource=name, detail=f"with={request.username}")
+    return out
+
+
+@router.delete("/{project_id}/members/{member_user_id}", status_code=204)
+def remove_member(project_id: str, member_user_id: int, user: AuthUser = Depends(get_current_user)):
+    with session_scope() as session:
+        project = _manageable_project(session, project_id, user)
+        member = next((m for m in project.members if m.user_id == member_user_id), None)
+        if member is None:
+            raise HTTPException(status_code=404, detail="Case is not shared with that user")
+        username = repositories.usernames_by_id(session, [member_user_id]).get(member_user_id, member_user_id)
+        session.delete(member)
+        name = project.name
+    audit.record(user, "project.unshared", resource=name, detail=f"with={username}")
 
 
 @router.delete("/{project_id}", status_code=204)
@@ -109,9 +181,7 @@ def delete_project(project_id: str, user: AuthUser = Depends(get_current_user)):
     """Remove the project: database records and every object under its
     storage prefix. Hydrated working copies in the extraction roots are kept."""
     with session_scope() as session:
-        project = repositories.get_project(session, project_id)
-        if project is None:
-            raise HTTPException(status_code=404, detail="Project not found")
+        project = _manageable_project(session, project_id, user)
         had_backups = bool(project.backups)
         name = project.name
         session.delete(project)
@@ -136,8 +206,7 @@ def upload_backup(
 
     backup_id = str(uuid.uuid4())
     with session_scope() as session:
-        if repositories.get_project(session, project_id) is None:
-            raise HTTPException(status_code=404, detail="Project not found")
+        _accessible_project(session, project_id, user)
         existing = repositories.find_backup_by_identity(session, platform.value, identifier)
         if existing is not None:
             raise HTTPException(status_code=409, detail=f"A backup named {identifier!r} was already uploaded")
@@ -185,8 +254,9 @@ def upload_backup(
 
 
 @router.get("/{project_id}/backups/{backup_id}", response_model=ProjectBackupOut)
-def backup_status(project_id: str, backup_id: str):
+def backup_status(project_id: str, backup_id: str, user: AuthUser = Depends(get_current_user)):
     with session_scope() as session:
+        _accessible_project(session, project_id, user)
         backup = repositories.get_project_backup(session, project_id, backup_id)
         if backup is None:
             raise HTTPException(status_code=404, detail="Backup not found in this project")
@@ -199,6 +269,7 @@ def hydrate_backup(project_id: str, backup_id: str, background: BackgroundTasks,
     root (e.g. after the local volume was wiped or on another node)."""
     get_object_storage()
     with session_scope() as session:
+        _accessible_project(session, project_id, user)
         backup = repositories.get_project_backup(session, project_id, backup_id)
         if backup is None:
             raise HTTPException(status_code=404, detail="Backup not found in this project")
@@ -218,6 +289,7 @@ def delete_backup(project_id: str, backup_id: str, purge_local: bool = False, us
     """Remove the backup from object storage and the project. The hydrated
     working copy is kept unless ``purge_local`` is set."""
     with session_scope() as session:
+        _accessible_project(session, project_id, user)
         backup = repositories.get_project_backup(session, project_id, backup_id)
         if backup is None:
             raise HTTPException(status_code=404, detail="Backup not found in this project")

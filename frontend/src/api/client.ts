@@ -217,8 +217,17 @@ export interface ProjectBackup {
   hydrated: boolean;
 }
 
+export interface ProjectMember {
+  user_id: number;
+  username: string | null;
+  added_at: string | null;
+}
+
 export interface ProjectDetail extends Project {
   backups: ProjectBackup[];
+  owner: string | null;
+  can_manage: boolean;
+  members: ProjectMember[];
 }
 
 /**
@@ -384,6 +393,14 @@ export const api = {
     requestDelete(
       `/projects/${encodeURIComponent(projectId)}/backups/${encodeURIComponent(backupId)}?purge_local=${purgeLocal}`,
     ),
+  addProjectMember: (projectId: string, username: string) =>
+    request<ProjectMember>(`/projects/${encodeURIComponent(projectId)}/members`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username }),
+    }),
+  removeProjectMember: (projectId: string, userId: number) =>
+    requestDelete(`/projects/${encodeURIComponent(projectId)}/members/${userId}`),
 };
 
 /** URL of a signed PDF export (plain link → browser download). */

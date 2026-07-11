@@ -191,5 +191,19 @@ class ProjectOut(BaseModel):
     backup_count: int = 0
 
 
+class ProjectMemberAdd(BaseModel):
+    username: str = Field(min_length=1, max_length=64)
+
+
+class ProjectMemberOut(BaseModel):
+    user_id: int
+    username: str | None = None
+    added_at: datetime | None = None
+
+
 class ProjectDetailOut(ProjectOut):
     backups: list[ProjectBackupOut] = []
+    owner: str | None = None
+    # computed for the requesting operator: may share/delete this case
+    can_manage: bool = True
+    members: list[ProjectMemberOut] = []
