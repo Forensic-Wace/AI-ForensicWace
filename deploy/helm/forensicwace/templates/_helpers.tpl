@@ -80,6 +80,8 @@ http://{{ include "fw.fullname" . }}-minio:9000
 {{- define "fw.sharedEnv" -}}
 - name: FW_DATA_DIR
   value: /data
+- name: FW_COOKIE_SECURE
+  value: {{ .Values.auth.cookieSecure | quote }}
 {{- if include "fw.s3Enabled" . }}
 - name: FW_S3_ENDPOINT
   value: {{ include "fw.s3Endpoint" . | quote }}

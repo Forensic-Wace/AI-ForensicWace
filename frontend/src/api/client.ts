@@ -17,6 +17,11 @@ export class ApiError extends Error {
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${BASE}${path}`, init);
   if (!response.ok) {
+    // a dead session anywhere in the app sends the user back to the login
+    // screen (AuthProvider listens); /auth/* handles its own 401s
+    if (response.status === 401 && !path.startsWith("/auth/")) {
+      window.dispatchEvent(new Event("fw:unauthorized"));
+    }
     let detail = response.statusText;
     try {
       detail = (await response.json()).detail ?? detail;
@@ -45,6 +50,22 @@ async function requestDelete(path: string): Promise<void> {
 // --- Types -------------------------------------------------------------
 
 export type Platform = "ios" | "android";
+
+export interface Me {
+  id: number | null;
+  username: string;
+  role: "admin" | "analyst";
+  auth_disabled: boolean;
+}
+
+export interface UserAccount {
+  id: number;
+  username: string;
+  role: "admin" | "analyst";
+  is_active: boolean;
+  created_at: string | null;
+  last_login: string | null;
+}
 
 export interface IosBackup {
   udid: string;
@@ -247,6 +268,29 @@ export interface TextResult {
 // --- Endpoints ------------------------------------------------------------
 
 export const api = {
+  login: (username: string, password: string) =>
+    request<Me>("/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    }),
+  logout: () => fetch(`${BASE}/auth/logout`, { method: "POST" }).then(() => undefined),
+  me: () => request<Me>("/auth/me"),
+
+  listUsers: () => request<UserAccount[]>("/users"),
+  createUser: (username: string, password: string, role: string) =>
+    request<UserAccount>("/users", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password, role }),
+    }),
+  updateUser: (userId: number, body: { role?: string; is_active?: boolean; password?: string }) =>
+    request<UserAccount>(`/users/${userId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }),
+
   listIosBackups: () => request<IosBackup[]>("/backups/ios"),
   listAndroidBackups: () => request<AndroidBackup[]>("/backups/android"),
   backupDetail: (platform: Platform, id: string) =>

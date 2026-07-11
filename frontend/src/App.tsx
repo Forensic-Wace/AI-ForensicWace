@@ -1,6 +1,9 @@
 import { NavLink, Route, Routes, useParams } from "react-router-dom";
 
+import { useAuth } from "./auth";
 import AnalyzePage from "./pages/AnalyzePage";
+import LoginPage from "./pages/LoginPage";
+import UsersPage from "./pages/UsersPage";
 import BackupOverviewPage from "./pages/BackupOverviewPage";
 import BackupsPage from "./pages/BackupsPage";
 import BlockedContactsPage from "./pages/BlockedContactsPage";
@@ -39,6 +42,15 @@ function BackupNav() {
 }
 
 export default function App() {
+  const { user, loading, logout } = useAuth();
+
+  if (loading) {
+    return <p className="muted" style={{ padding: "2rem" }}>Loading…</p>;
+  }
+  if (!user) {
+    return <LoginPage />;
+  }
+
   return (
     <div className="app">
       <aside className="sidebar">
@@ -51,11 +63,22 @@ export default function App() {
           <NavLink to="/processes">AI processes</NavLink>
           <NavLink to="/verify">Verify report</NavLink>
           <NavLink to="/status">Analyzer status</NavLink>
+          {user.role === "admin" && !user.auth_disabled && <NavLink to="/users">Users</NavLink>}
           <Routes>
             <Route path="/:platform/:backupId/*" element={<BackupNav />} />
             <Route path="*" element={null} />
           </Routes>
         </nav>
+        <div className="sidebar-user">
+          <span>
+            {user.username} <span className="muted">({user.role})</span>
+          </span>
+          {!user.auth_disabled && (
+            <button className="button secondary" onClick={logout}>
+              Sign out
+            </button>
+          )}
+        </div>
       </aside>
       <main>
         <Routes>
@@ -75,6 +98,7 @@ export default function App() {
           <Route path="/processes/:processId" element={<ProcessResultsPage />} />
           <Route path="/verify" element={<VerifyReportPage />} />
           <Route path="/status" element={<StatusPage />} />
+          <Route path="/users" element={<UsersPage />} />
         </Routes>
       </main>
     </div>

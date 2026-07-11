@@ -121,6 +121,15 @@ rabbitmq:
   # KEDA scaler connection (single trailing slash = default vhost)
   externalKedaHost: ""
 
+# Authentication. Lab-grade defaults — ALWAYS override on a shared cluster.
+# jwtSecret must be >= 32 characters; the bootstrap admin is created at first
+# API startup. cookieSecure requires TLS on the ingress.
+auth:
+  jwtSecret: forensicwace-lab-secret-change-me-please
+  adminUsername: admin
+  adminPassword: forensicwace
+  cookieSecure: false
+
 # Analyzer credentials — injected into api and worker as FW_* env vars via a
 # Secret. Set only what you use; use --set-file / external secret managers in
 # real deployments instead of committing values files.

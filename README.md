@@ -43,8 +43,9 @@ architecture and roadmap live in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 ```
 
 All seven roadmap phases are complete — see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-for the architecture, the WhatsApp schema registry design, and follow-up work
-(multi-user auth, Alembic migrations).
+for the architecture, the WhatsApp schema registry design, and follow-up work.
+Multi-user authentication (JWT + roles), Alembic migrations and an append-only
+audit log shipped after phase 7 — login with the FW_ADMIN_* bootstrap account.
 
 ## Quick start (Docker)
 
@@ -144,8 +145,8 @@ LIABILITY ARISING FROM THE USE OF THE SOFTWARE.**
 This tool is intended for **lawful forensic analysis** by authorized
 professionals. The authors assume no liability for unauthorized access to
 systems or data, privacy violations, legal consequences of improper use, or
-wrong analysis results. Deploy only on trusted lab networks — authentication
-is not yet enforced (see [SECURITY.md](SECURITY.md)).
+wrong analysis results. Override the default credentials and serve over TLS
+before exposing it beyond a trusted lab network (see [SECURITY.md](SECURITY.md)).
 
 ## Acknowledgments
 

@@ -10,7 +10,7 @@ import time
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 
 from forensicwace_core.backups.android import resolve_db_path
@@ -23,6 +23,7 @@ from forensicwace_core.resultsdb import repositories
 from forensicwace_core.resultsdb.engine import session_scope
 from forensicwace_core.resultsdb.models import ProcessStatus
 
+from ..auth import AuthUser, get_current_user
 from ..schemas import AnalysisRequest, AnalysisSubmitted, FindingOut, ProcessOut, TextResultOut
 
 router = APIRouter(prefix="/analyses", tags=["analysis"])
@@ -48,7 +49,7 @@ def _to_process_out(process: ProcessStatus) -> ProcessOut:
 
 
 @router.post("", response_model=AnalysisSubmitted, status_code=202)
-def submit_analysis(request: AnalysisRequest):
+def submit_analysis(request: AnalysisRequest, user: AuthUser = Depends(get_current_user)):
     problems = registry.validate_requested(request.analyzers)
     if problems:
         raise HTTPException(status_code=422, detail="; ".join(problems))
@@ -75,6 +76,7 @@ def submit_analysis(request: AnalysisRequest):
         groups=",".join(request.groups),
         msg_type=",".join(request.message_types),
         analyzers=",".join(request.analyzers),
+        created_by=user.id,
     )
     with session_scope() as session:
         session.add(process)

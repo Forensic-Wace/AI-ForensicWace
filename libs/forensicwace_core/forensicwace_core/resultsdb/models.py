@@ -40,6 +40,12 @@ class Text(Base):
 
 
 class User(Base):
+    """Operator accounts and legacy analysis subjects.
+
+    Rows with ``username`` set are login-capable platform users; legacy rows
+    without it (pre-auth analysis subjects) are kept untouched.
+    """
+
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
@@ -47,6 +53,15 @@ class User(Base):
     surname = Column(String, nullable=False)
     address = Column(String)
     comment = Column(String)
+
+    # Authentication (nullable: legacy subject rows never log in)
+    username = Column(String(64), unique=True, index=True)
+    password_hash = Column(String(255))
+    role = Column(String(10))  # admin | analyst
+    is_active = Column(Boolean)
+    token_version = Column(Integer)  # bumped to revoke outstanding sessions
+    created_at = Column(DateTime(timezone=True))
+    last_login = Column(DateTime(timezone=True))
 
     texts = relationship("Text", back_populates="user")
 
@@ -86,6 +101,7 @@ class Project(Base):
     name = Column(String(200), nullable=False)
     description = Column(String, default="")
     created_at = Column(DateTime(timezone=True))
+    created_by = Column(Integer)  # users.id of the operator
 
     backups = relationship("ProjectBackup", back_populates="project", cascade="all, delete-orphan")
 
@@ -113,6 +129,7 @@ class ProjectBackup(Base):
     file_count = Column(Integer, default=0)
     uploaded_at = Column(DateTime(timezone=True))
     completed_at = Column(DateTime(timezone=True))
+    created_by = Column(Integer)
 
     project = relationship("Project", back_populates="backups")
 
@@ -166,3 +183,4 @@ class ProcessStatus(Base):
     total_messages = Column(Integer, default=0)
     analyzed_messages = Column(Integer, default=0)
     failed_messages = Column(Integer, default=0)
+    created_by = Column(Integer)  # users.id of the submitting operator

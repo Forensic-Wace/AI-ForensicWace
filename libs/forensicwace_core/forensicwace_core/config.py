@@ -45,6 +45,17 @@ class Settings(BaseSettings):
     s3_bucket: str = "forensicwace-evidence"
     s3_region: Optional[str] = None
 
+    # --- Authentication ------------------------------------------------------
+    # JWT session cookie. Unset secret = ephemeral per-process (dev only:
+    # sessions die on restart and cannot span replicas). FW_AUTH_DISABLED
+    # turns the whole layer off (tests / trusted single-user labs).
+    jwt_secret: Optional[str] = None
+    auth_disabled: bool = False
+    session_hours: int = 12
+    cookie_secure: bool = False  # set true behind TLS
+    admin_username: Optional[str] = None  # bootstrap admin, created at startup
+    admin_password: Optional[str] = None
+
     # --- Results database (PostgreSQL) ------------------------------------
     database_url: Optional[str] = None
 

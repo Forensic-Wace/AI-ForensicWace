@@ -84,11 +84,13 @@ def analyze_and_persist(message: Message, process_id: str, requested: list[str])
         for row in stale:
             session.delete(row)
 
+        # attribute the finding to the operator who submitted the analysis
+        created_by = session.query(ProcessStatus.created_by).filter_by(process_id=process_id).scalar()
         text_row = Text(
             msg_id=str(message.id),
             process_id=process_id,
             text=text,
-            user_id=1,  # single-user until multi-user auth lands
+            user_id=created_by,
             date=message.timestamp,
         )
         for finding in findings:

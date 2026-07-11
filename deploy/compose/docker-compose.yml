@@ -80,6 +80,11 @@ services:
       FW_S3_ACCESS_KEY: ${MINIO_ROOT_USER:-forensicwace}
       FW_S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-forensicwace}
       FW_S3_BUCKET: ${FW_S3_BUCKET:-forensicwace-evidence}
+      # Authentication (lab defaults — ALWAYS override outside a trusted lab)
+      FW_JWT_SECRET: ${FW_JWT_SECRET:-forensicwace-dev-secret-change-me-please}
+      FW_ADMIN_USERNAME: ${FW_ADMIN_USERNAME:-admin}
+      FW_ADMIN_PASSWORD: ${FW_ADMIN_PASSWORD:-forensicwace}
+      FW_COOKIE_SECURE: ${FW_COOKIE_SECURE:-false}
       FW_DEEPPASS_ENDPOINT: ${FW_DEEPPASS_ENDPOINT:-}
       FW_WHISPER_ENDPOINT: ${FW_WHISPER_ENDPOINT:-http://whisper:9000/asr}
       FW_TESSERACT_ENDPOINT: ${FW_TESSERACT_ENDPOINT:-http://tesseract:8884/v1/ocr}

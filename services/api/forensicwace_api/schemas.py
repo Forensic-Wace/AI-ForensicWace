@@ -5,6 +5,39 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 
 
+class LoginRequest(BaseModel):
+    username: str = Field(min_length=1, max_length=64)
+    password: str = Field(min_length=1)
+
+
+class MeOut(BaseModel):
+    id: int | None = None
+    username: str
+    role: str
+    auth_disabled: bool = False
+
+
+class UserCreate(BaseModel):
+    username: str = Field(min_length=2, max_length=64, pattern=r"^[a-zA-Z0-9._-]+$")
+    password: str = Field(min_length=8)
+    role: str = Field(default="analyst", pattern="^(admin|analyst)$")
+
+
+class UserUpdate(BaseModel):
+    role: str | None = Field(default=None, pattern="^(admin|analyst)$")
+    is_active: bool | None = None
+    password: str | None = Field(default=None, min_length=8)
+
+
+class UserOut(BaseModel):
+    id: int
+    username: str
+    role: str
+    is_active: bool
+    created_at: datetime | None = None
+    last_login: datetime | None = None
+
+
 class IosBackup(BaseModel):
     udid: str
     device_name: str | None = None

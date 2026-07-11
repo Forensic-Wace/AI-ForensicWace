@@ -18,7 +18,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
 
 from forensicwace_core.backups import packaging
 from forensicwace_core.backups.ios import validate_identifier
@@ -29,6 +29,7 @@ from forensicwace_core.resultsdb.engine import session_scope
 from forensicwace_core.resultsdb.models import Project, ProjectBackup
 from forensicwace_core.storage import get_object_storage
 
+from ..auth import AuthUser, get_current_user
 from ..schemas import ProjectBackupOut, ProjectCreate, ProjectDetailOut, ProjectOut
 
 logger = logging.getLogger(__name__)
@@ -68,12 +69,13 @@ def _to_project_out(project: Project) -> ProjectOut:
 
 
 @router.post("", response_model=ProjectOut, status_code=201)
-def create_project(request: ProjectCreate):
+def create_project(request: ProjectCreate, user: AuthUser = Depends(get_current_user)):
     project = Project(
         id=str(uuid.uuid4()),
         name=request.name,
         description=request.description,
         created_at=_now(),
+        created_by=user.id,
     )
     with session_scope() as session:
         session.add(project)
@@ -121,6 +123,7 @@ def upload_backup(
     platform: Platform = Form(...),
     identifier: str | None = Form(None, description="Target folder/UDID name; defaults to the archive name"),
     auto_hydrate: bool = Form(True, description="Also materialize a local working copy right away"),
+    user: AuthUser = Depends(get_current_user),
 ):
     settings = get_settings()
     get_object_storage()  # fail fast (503) before accepting the body
@@ -161,6 +164,7 @@ def upload_backup(
         size_bytes=inventory.total_bytes,
         file_count=inventory.file_count,
         uploaded_at=_now(),
+        created_by=user.id,
     )
     with session_scope() as session:
         session.add(backup)

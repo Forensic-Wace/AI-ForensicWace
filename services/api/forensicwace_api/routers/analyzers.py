@@ -11,7 +11,7 @@ import logging
 from datetime import datetime, timezone
 
 import httpx
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import ValidationError
 
 from forensicwace_core.analysis import registry
@@ -19,6 +19,7 @@ from forensicwace_core.analysis.analyzers import http_analyzer
 from forensicwace_core.resultsdb.engine import session_scope
 from forensicwace_core.resultsdb.models import Analyzer
 
+from ..auth import require_admin
 from ..schemas import AnalyzerRegister, AnalyzerStatusOut, AnalyzerUpdate, InstalledAnalyzerOut
 
 logger = logging.getLogger(__name__)
@@ -55,7 +56,7 @@ def analyzers_status():
     return [AnalyzerStatusOut(name=s.name, available=s.available, detail=str(s.detail)) for s in registry.all_statuses()]
 
 
-@router.post("", response_model=InstalledAnalyzerOut, status_code=201)
+@router.post("", response_model=InstalledAnalyzerOut, status_code=201, dependencies=[Depends(require_admin)])
 def register_analyzer(request: AnalyzerRegister):
     """Register a running fw-analyzer/1 container; its manifest is authoritative."""
     try:
@@ -93,7 +94,7 @@ def register_analyzer(request: AnalyzerRegister):
     return out
 
 
-@router.patch("/{key}", response_model=InstalledAnalyzerOut)
+@router.patch("/{key}", response_model=InstalledAnalyzerOut, dependencies=[Depends(require_admin)])
 def update_analyzer(key: str, request: AnalyzerUpdate):
     with session_scope() as session:
         row = session.query(Analyzer).filter_by(key=key).first()
@@ -110,7 +111,7 @@ def update_analyzer(key: str, request: AnalyzerUpdate):
     return out
 
 
-@router.delete("/{key}", status_code=204)
+@router.delete("/{key}", status_code=204, dependencies=[Depends(require_admin)])
 def uninstall_analyzer(key: str):
     """Remove a runtime-installed analyzer. Built-ins can only be disabled."""
     with session_scope() as session:

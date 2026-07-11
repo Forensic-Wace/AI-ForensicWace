@@ -65,6 +65,49 @@ a {
   color: #fff;
 }
 
+.sidebar {
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar nav {
+  flex: 1;
+}
+
+.sidebar-user {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.88rem;
+  color: #d7efe9;
+}
+
+.sidebar-user .muted {
+  color: #9fc9bf;
+}
+
+/* Login */
+.login-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-dark);
+}
+
+.login-card {
+  width: 340px;
+}
+
+.login-card h1 {
+  margin: 0 0 0.25rem;
+  color: var(--accent-dark);
+  font-size: 1.4rem;
+}
+
 .sidebar .section {
   margin: 1rem 0 0.35rem;
   font-size: 0.72rem;

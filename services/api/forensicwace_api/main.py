@@ -1,14 +1,15 @@
 """Forensic Wace REST API.
 
-Stateless by design: every request carries the backup it refers to; there is
-no per-client server-side session. OpenAPI docs are served at ``/docs``.
+Stateless by design: the session is a JWT cookie, every request carries the
+backup it refers to; there is no per-client server-side state. OpenAPI docs
+are served at ``/docs``. Deployment is same-origin (nginx / vite proxy
+``/api``), so no CORS middleware is installed.
 """
 
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import Depends, FastAPI, Request
 from fastapi.responses import JSONResponse
 from prometheus_fastapi_instrumentator import Instrumentator
 
@@ -24,7 +25,8 @@ from forensicwace_core.exceptions import (
     UnsupportedCapabilityError,
 )
 
-from .routers import analyses, analyzers, backups, chats_android, chats_ios, health, projects, reports, schemas
+from .auth import ensure_bootstrap_admin, get_current_user
+from .routers import analyses, analyzers, auth, backups, chats_android, chats_ios, health, projects, reports, schemas, users
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +49,7 @@ async def lifespan(app: FastAPI):
         try:
             init_db()
             sync_builtin_analyzers()
+            ensure_bootstrap_admin()
         except Exception:
             logger.exception("Results database unavailable — analysis endpoints will fail until it is reachable")
     yield
@@ -60,13 +63,6 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["*"],  # tightened when auth lands (Phase 2)
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-
     for exc_type, status_code in _ERROR_STATUS.items():
         app.add_exception_handler(exc_type, _domain_error_handler(status_code))
     app.add_exception_handler(UnknownSchemaError, _unknown_schema_handler)
@@ -76,16 +72,21 @@ def create_app() -> FastAPI:
     # the Helm chart).
     Instrumentator(excluded_handlers=["/metrics", "/healthz", "/readyz"]).instrument(app).expose(app)
 
-    app.include_router(health.router)
+    app.include_router(health.router)  # liveness probes stay public
+
     prefix = "/api/v1"
-    app.include_router(backups.router, prefix=prefix)
-    app.include_router(chats_ios.router, prefix=prefix)
-    app.include_router(chats_android.router, prefix=prefix)
-    app.include_router(analyses.router, prefix=prefix)
-    app.include_router(analyzers.router, prefix=prefix)
-    app.include_router(projects.router, prefix=prefix)
-    app.include_router(reports.router, prefix=prefix)
-    app.include_router(schemas.router, prefix=prefix)
+    # every route below requires a session; /auth/login manages its own access
+    protected = [Depends(get_current_user)]
+    app.include_router(auth.router, prefix=prefix)
+    app.include_router(backups.router, prefix=prefix, dependencies=protected)
+    app.include_router(chats_ios.router, prefix=prefix, dependencies=protected)
+    app.include_router(chats_android.router, prefix=prefix, dependencies=protected)
+    app.include_router(analyses.router, prefix=prefix, dependencies=protected)
+    app.include_router(analyzers.router, prefix=prefix, dependencies=protected)
+    app.include_router(projects.router, prefix=prefix, dependencies=protected)
+    app.include_router(reports.router, prefix=prefix, dependencies=protected)
+    app.include_router(schemas.router, prefix=prefix, dependencies=protected)
+    app.include_router(users.router, prefix=prefix)  # require_admin at router level
     return app
 
 

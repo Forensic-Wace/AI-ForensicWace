@@ -21,7 +21,16 @@ The following are treated as security issues, not just bugs:
 
 ## Deployment expectations
 
-The current Server Edition is designed for **trusted lab networks**. Do not expose it
-directly to the internet: authentication is not yet enforced (multi-user auth is on the
-roadmap — see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)). Operators are responsible
-for network isolation and at-rest encryption of the results database.
+The platform enforces **multi-user authentication** (local accounts, argon2id
+passwords, JWT session cookie) with two roles: `analyst` and `admin` (user
+management and analyzer-registry changes are admin-only). Operators must:
+
+- set a strong `FW_JWT_SECRET` (>= 32 chars) and override the bootstrap
+  `FW_ADMIN_PASSWORD` — the compose/Helm defaults are lab-grade placeholders;
+- serve over TLS outside a trusted lab and set `FW_COOKIE_SECURE=true`;
+- never set `FW_AUTH_DISABLED=true` outside local single-user development;
+- remain responsible for network isolation and at-rest encryption of the
+  results database (it contains PII by design).
+
+Prometheus `/metrics` and the health probes are unauthenticated by design:
+keep them cluster-internal.
