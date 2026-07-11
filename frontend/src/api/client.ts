@@ -28,6 +28,20 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+/** DELETE endpoints answer 204 with no body, so request<T>'s .json() does not apply. */
+async function requestDelete(path: string): Promise<void> {
+  const response = await fetch(`${BASE}${path}`, { method: "DELETE" });
+  if (!response.ok) {
+    let detail = response.statusText;
+    try {
+      detail = (await response.json()).detail ?? detail;
+    } catch {
+      /* non-JSON error body */
+    }
+    throw new ApiError(response.status, detail);
+  }
+}
+
 // --- Types -------------------------------------------------------------
 
 export type Platform = "ios" | "android";
@@ -84,6 +98,22 @@ export interface AnalyzerStatus {
   detail: string;
 }
 
+export type Capability = "pii" | "password" | "transcription" | "ocr" | "caption";
+
+export interface InstalledAnalyzer {
+  key: string;
+  name: string;
+  version: string;
+  type: "builtin" | "http";
+  capabilities: Capability[];
+  input: "text" | "audio" | "image";
+  trust: "local" | "cloud";
+  enabled: boolean;
+  endpoint: string | null;
+  image_digest: string | null;
+  config: Record<string, unknown>;
+}
+
 export interface AnalysisRequest {
   platform: Platform;
   backup_id: string;
@@ -134,10 +164,76 @@ export function subscribeAnalysisEvents(
   return () => source.close();
 }
 
+export interface Project {
+  id: string;
+  name: string;
+  description: string | null;
+  created_at: string | null;
+  backup_count: number;
+}
+
+export interface ProjectBackup {
+  id: string;
+  platform: Platform;
+  identifier: string;
+  status: "processing" | "hydrating" | "stored" | "error";
+  detail: string | null;
+  original_filename: string | null;
+  size_bytes: number;
+  file_count: number;
+  uploaded_at: string | null;
+  completed_at: string | null;
+  hydrated: boolean;
+}
+
+export interface ProjectDetail extends Project {
+  backups: ProjectBackup[];
+}
+
+/**
+ * Upload a backup ZIP into a project with browser-side progress reporting
+ * (XMLHttpRequest: fetch has no upload progress events).
+ */
+export function uploadProjectBackup(
+  projectId: string,
+  body: { file: File; platform: Platform; identifier?: string; autoHydrate: boolean },
+  onProgress?: (percent: number) => void,
+): Promise<ProjectBackup> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `${BASE}/projects/${encodeURIComponent(projectId)}/backups`);
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) onProgress?.(Math.round((event.loaded / event.total) * 100));
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(JSON.parse(xhr.responseText) as ProjectBackup);
+      } else {
+        let detail = xhr.statusText;
+        try {
+          detail = JSON.parse(xhr.responseText).detail ?? detail;
+        } catch {
+          /* non-JSON error body */
+        }
+        reject(new ApiError(xhr.status, detail));
+      }
+    };
+    xhr.onerror = () => reject(new ApiError(0, "Network error during upload"));
+    const form = new FormData();
+    form.append("file", body.file);
+    form.append("platform", body.platform);
+    if (body.identifier) form.append("identifier", body.identifier);
+    form.append("auto_hydrate", String(body.autoHydrate));
+    xhr.send(form);
+  });
+}
+
 export interface Finding {
   type: string | null;
   value: string | null;
   source: string;
+  analyzer_version: string | null;
+  analyzer_digest: string | null;
 }
 
 export interface TextResult {
@@ -178,6 +274,20 @@ export const api = {
     request<Record<string, unknown>[]>(`/backups/ios/${encodeURIComponent(id)}/blocked-contacts`),
 
   analyzersStatus: () => request<AnalyzerStatus[]>("/analyzers/status"),
+  listAnalyzers: () => request<InstalledAnalyzer[]>("/analyzers"),
+  registerAnalyzer: (endpoint: string, config: Record<string, unknown> = {}) =>
+    request<InstalledAnalyzer>("/analyzers", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ endpoint, config }),
+    }),
+  updateAnalyzer: (key: string, body: { enabled?: boolean; config?: Record<string, unknown> }) =>
+    request<InstalledAnalyzer>(`/analyzers/${encodeURIComponent(key)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }),
+  uninstallAnalyzer: (key: string) => requestDelete(`/analyzers/${encodeURIComponent(key)}`),
 
   submitAnalysis: (body: AnalysisRequest) =>
     request<{ process_id: string; status: string }>("/analyses", {
@@ -196,6 +306,29 @@ export const api = {
     form.append("token", token);
     return request<{ verified: boolean }>("/reports/verify", { method: "POST", body: form });
   },
+
+  listProjects: () => request<Project[]>("/projects"),
+  createProject: (name: string, description: string) =>
+    request<Project>("/projects", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, description }),
+    }),
+  projectDetail: (projectId: string) => request<ProjectDetail>(`/projects/${encodeURIComponent(projectId)}`),
+  deleteProject: (projectId: string) => requestDelete(`/projects/${encodeURIComponent(projectId)}`),
+  projectBackup: (projectId: string, backupId: string) =>
+    request<ProjectBackup>(
+      `/projects/${encodeURIComponent(projectId)}/backups/${encodeURIComponent(backupId)}`,
+    ),
+  hydrateProjectBackup: (projectId: string, backupId: string) =>
+    request<ProjectBackup>(
+      `/projects/${encodeURIComponent(projectId)}/backups/${encodeURIComponent(backupId)}/hydrate`,
+      { method: "POST" },
+    ),
+  deleteProjectBackup: (projectId: string, backupId: string, purgeLocal: boolean) =>
+    requestDelete(
+      `/projects/${encodeURIComponent(projectId)}/backups/${encodeURIComponent(backupId)}?purge_local=${purgeLocal}`,
+    ),
 };
 
 /** URL of a signed PDF export (plain link → browser download). */

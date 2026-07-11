@@ -37,13 +37,14 @@ architecture and roadmap live in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
      │ consume (retry ×3, acks_late)
 [worker]    Celery — one task per (message, stage), horizontally scalable
      ├── forensicwace_core  (extraction, analyzers, reporting)
-     ├── [postgres]         analysis results & atomic progress counters
+     ├── [postgres]         analysis results, projects & atomic progress counters
+     ├── [minio]            S3-compatible evidence store for browser-uploaded backups
      └── analyzer sidecars  DeepPass · Whisper · Tesseract · LAVIS (optional)
 ```
 
-All six roadmap phases are complete — see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+All seven roadmap phases are complete — see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 for the architecture, the WhatsApp schema registry design, and follow-up work
-(S3/MinIO evidence storage, multi-user auth, Alembic migrations).
+(multi-user auth, Alembic migrations).
 
 ## Quick start (Docker)
 
@@ -54,6 +55,8 @@ cd AI-ForensicWace
 # Evidence goes under ./data (gitignored — NEVER commit evidence):
 #   data/device_extractions_IOS/<UDID>/...
 #   data/device_extractions_Android/<extraction_name>/msgstore.db
+# ...or upload backups as ZIPs from the web UI (Projects page): they are
+# stored on the bundled MinIO and hydrated under ./data automatically.
 
 docker compose -f deploy/compose/docker-compose.yml --profile core up --build
 # Web UI:   http://localhost:3000

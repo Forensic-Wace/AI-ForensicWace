@@ -1,0 +1,124 @@
+{
+  "$defs": {
+    "AnalyzerResources": {
+      "description": "Scheduling hints used by the phase-C provisioner; advisory in phase A.",
+      "properties": {
+        "cpu": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cpu"
+        },
+        "memory": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Memory"
+        },
+        "gpu": {
+          "default": false,
+          "title": "Gpu",
+          "type": "boolean"
+        }
+      },
+      "title": "AnalyzerResources",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "contract": {
+      "const": "fw-analyzer/1",
+      "title": "Contract",
+      "type": "string"
+    },
+    "key": {
+      "description": "Stable unique id, referenced by analysis requests",
+      "pattern": "^[a-z][a-z0-9_-]{1,63}$",
+      "title": "Key",
+      "type": "string"
+    },
+    "name": {
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Name",
+      "type": "string"
+    },
+    "version": {
+      "maxLength": 50,
+      "minLength": 1,
+      "title": "Version",
+      "type": "string"
+    },
+    "capabilities": {
+      "items": {
+        "enum": [
+          "pii",
+          "password",
+          "transcription",
+          "ocr",
+          "caption"
+        ],
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Capabilities",
+      "type": "array"
+    },
+    "input": {
+      "enum": [
+        "text",
+        "audio",
+        "image"
+      ],
+      "title": "Input",
+      "type": "string"
+    },
+    "config_schema": {
+      "additionalProperties": true,
+      "description": "JSON Schema of the operator-facing options",
+      "title": "Config Schema",
+      "type": "object"
+    },
+    "resources": {
+      "$ref": "#/$defs/AnalyzerResources",
+      "default": {
+        "cpu": null,
+        "memory": null,
+        "gpu": false
+      }
+    },
+    "trust": {
+      "default": "local",
+      "description": "local = evidence never leaves the deployment",
+      "enum": [
+        "local",
+        "cloud"
+      ],
+      "title": "Trust",
+      "type": "string"
+    }
+  },
+  "required": [
+    "contract",
+    "key",
+    "name",
+    "version",
+    "capabilities",
+    "input"
+  ],
+  "title": "AnalyzerManifest",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

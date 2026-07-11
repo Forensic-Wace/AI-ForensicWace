@@ -2,11 +2,11 @@
 #   docker build -f services/worker/Dockerfile .
 #
 # CORE_EXTRAS selects the analyzer stacks baked into the image (see
-# libs/forensicwace_core/pyproject.toml): postgres | presidio | starpii | azure | openai
+# libs/forensicwace_core/pyproject.toml): postgres | s3 | presidio | starpii | azure | openai
 
 FROM python:3.12-slim
 
-ARG CORE_EXTRAS=postgres
+ARG CORE_EXTRAS=postgres,s3
 
 # ffmpeg converts voice notes to WAV before transcription
 RUN apt-get update \

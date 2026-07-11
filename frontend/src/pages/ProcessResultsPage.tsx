@@ -78,7 +78,12 @@ export default function ProcessResultsPage() {
             <p>
               <b>PII:</b>{" "}
               {result.piis.map((f, i) => (
-                <span key={i} className="badge busy" style={{ marginRight: "0.4rem" }}>
+                <span
+                  key={i}
+                  className="badge busy"
+                  style={{ marginRight: "0.4rem" }}
+                  title={f.analyzer_version ? `${f.source} v${f.analyzer_version}${f.analyzer_digest ? ` (${f.analyzer_digest})` : ""}` : f.source}
+                >
                   {f.type}: {f.value} ({f.source})
                 </span>
               ))}
@@ -88,7 +93,12 @@ export default function ProcessResultsPage() {
             <p>
               <b>Passwords:</b>{" "}
               {result.passwords.map((f, i) => (
-                <span key={i} className="badge ko" style={{ marginRight: "0.4rem" }}>
+                <span
+                  key={i}
+                  className="badge ko"
+                  style={{ marginRight: "0.4rem" }}
+                  title={f.analyzer_version ? `${f.source} v${f.analyzer_version}${f.analyzer_digest ? ` (${f.analyzer_digest})` : ""}` : f.source}
+                >
                   {f.value} ({f.source})
                 </span>
               ))}

@@ -68,19 +68,22 @@ def _azure_describe(image_path: Path) -> tuple[str | None, str | None]:
     return caption, ocr_text
 
 
-def describe(message: Message) -> None:
-    """Populate ``message.caption`` and ``message.ocr_text`` from its image."""
-    if message.media_path is None:
-        return
+def ocr_tesseract(message: Message) -> None:
+    """Populate ``message.ocr_text`` via the Tesseract sidecar."""
+    if message.media_path is not None and get_settings().tesseract_endpoint:
+        message.ocr_text = _tesseract_ocr(message.media_path)
 
-    settings = get_settings()
-    if settings.use_ms_ocr_caption and settings.ms_cv_key:
+
+def caption_lavis(message: Message) -> None:
+    """Populate ``message.caption`` via the LAVIS sidecar."""
+    if message.media_path is not None and get_settings().lavis_endpoint:
+        message.caption = _lavis_caption(message.media_path)
+
+
+def describe_azure(message: Message) -> None:
+    """Populate caption and OCR text via Azure Computer Vision (one call)."""
+    if message.media_path is not None and get_settings().ms_cv_key:
         message.caption, message.ocr_text = _azure_describe(message.media_path)
-    else:
-        if settings.tesseract_endpoint:
-            message.ocr_text = _tesseract_ocr(message.media_path)
-        if settings.lavis_endpoint:
-            message.caption = _lavis_caption(message.media_path)
 
 
 def _test_image(name: str) -> Path | None:

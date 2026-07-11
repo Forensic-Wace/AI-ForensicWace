@@ -19,16 +19,11 @@ from ..resultsdb import repositories
 from ..resultsdb.engine import session_scope
 from ..resultsdb.models import PII, Password, ProcessStatus, Text
 from ..whatsapp import android
-from . import analyzers
-from .analyzers import speech, vision
+from . import registry
 from .messages import from_android_rows
 from .types import Message
 
 logger = logging.getLogger(__name__)
-
-# Analyzer keys with a special meaning: media enrichment stages.
-S2T_KEY = "S2T"
-IMAGE_KEY = "image_OCR"
 
 
 def extract_messages(process: ProcessStatus) -> list[Message]:
@@ -54,19 +49,14 @@ def extract_messages(process: ProcessStatus) -> list[Message]:
 
 def needs_media_stage(message: Message, requested: list[str]) -> bool:
     """True when the message must pass through audio/image enrichment first."""
-    if message.media_path is None:
-        return False
-    is_audio = S2T_KEY in requested and "audio" in (message.mime_type or "")
-    is_image = IMAGE_KEY in requested and message.message_type == "image"
-    return is_audio or is_image
+    return any(registry.applies_to_message(a, message) for a in registry.resolve(requested) if a.is_media)
 
 
 def enrich_media(message: Message, requested: list[str]) -> Message:
     """Run the requested media analyzers, storing their output on the message."""
-    if S2T_KEY in requested and message.media_path and "audio" in (message.mime_type or ""):
-        speech.transcribe(message)
-    if IMAGE_KEY in requested and message.media_path and message.message_type == "image":
-        vision.describe(message)
+    for analyzer in registry.resolve(requested):
+        if analyzer.is_media and registry.applies_to_message(analyzer, message):
+            registry.run_media_analyzer(analyzer, message)
     return message
 
 
@@ -80,8 +70,10 @@ def analyze_and_persist(message: Message, process_id: str, requested: list[str])
     if not text:
         return
 
-    text_analyzers = [a for a in requested if a in analyzers.TEXT_ANALYZERS]
-    findings = analyzers.run_text_analyzers(text, text_analyzers)
+    findings = []
+    for analyzer in registry.resolve(requested):
+        if analyzer.input == "text":
+            findings.extend(registry.run_text_analyzer(analyzer, text))
 
     with session_scope() as session:
         stale = (
@@ -101,9 +93,24 @@ def analyze_and_persist(message: Message, process_id: str, requested: list[str])
         )
         for finding in findings:
             if finding.kind == "password":
-                text_row.passwords.append(Password(password=finding.value, source=finding.source))
+                text_row.passwords.append(
+                    Password(
+                        password=finding.value,
+                        source=finding.source,
+                        analyzer_version=finding.analyzer_version,
+                        analyzer_digest=finding.analyzer_digest,
+                    )
+                )
             else:
-                text_row.piis.append(PII(type=finding.entity_type, value=finding.value, source=finding.source))
+                text_row.piis.append(
+                    PII(
+                        type=finding.entity_type,
+                        value=finding.value,
+                        source=finding.source,
+                        analyzer_version=finding.analyzer_version,
+                        analyzer_digest=finding.analyzer_digest,
+                    )
+                )
         session.add(text_row)
 
 

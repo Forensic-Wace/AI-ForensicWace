@@ -12,13 +12,16 @@ import HomePage from "./pages/HomePage";
 import PrivateChatPage from "./pages/PrivateChatPage";
 import ProcessesPage from "./pages/ProcessesPage";
 import ProcessResultsPage from "./pages/ProcessResultsPage";
+import ProjectDetailPage from "./pages/ProjectDetailPage";
+import ProjectsPage from "./pages/ProjectsPage";
 import StatusPage from "./pages/StatusPage";
 import VerifyReportPage from "./pages/VerifyReportPage";
 import type { Platform } from "./api/client";
 
 function BackupNav() {
   const { platform, backupId } = useParams<{ platform: Platform; backupId: string }>();
-  if (!platform || !backupId) return null;
+  // the pattern also matches non-backup paths like /projects/<id>
+  if (!platform || !backupId || (platform !== "ios" && platform !== "android")) return null;
   const base = `/${platform}/${encodeURIComponent(backupId)}`;
   return (
     <>
@@ -44,6 +47,7 @@ export default function App() {
           <NavLink to="/" end>
             Select backup
           </NavLink>
+          <NavLink to="/projects">Projects</NavLink>
           <NavLink to="/processes">AI processes</NavLink>
           <NavLink to="/verify">Verify report</NavLink>
           <NavLink to="/status">Analyzer status</NavLink>
@@ -56,6 +60,8 @@ export default function App() {
       <main>
         <Routes>
           <Route path="/" element={<HomePage />} />
+          <Route path="/projects" element={<ProjectsPage />} />
+          <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
           <Route path="/backups/:platform" element={<BackupsPage />} />
           <Route path="/:platform/:backupId" element={<BackupOverviewPage />} />
           <Route path="/:platform/:backupId/chats" element={<ChatListPage />} />

@@ -35,6 +35,16 @@ class Settings(BaseSettings):
     # the Docker images set it to the bundled copy.
     schemas_dir: Path = Path("schemas/whatsapp")
 
+    # --- Object storage (S3 / MinIO) ---------------------------------------
+    # Durable store for backups uploaded through the projects API. Unset =
+    # feature disabled. ``file://`` endpoints select the filesystem backend
+    # (development and tests); anything else is treated as S3-compatible.
+    s3_endpoint: Optional[str] = None
+    s3_access_key: Optional[str] = None
+    s3_secret_key: Optional[str] = None
+    s3_bucket: str = "forensicwace-evidence"
+    s3_region: Optional[str] = None
+
     # --- Results database (PostgreSQL) ------------------------------------
     database_url: Optional[str] = None
 
@@ -86,6 +96,15 @@ class Settings(BaseSettings):
     @property
     def android_dir(self) -> Path:
         return self.android_extractions_dir or self.data_dir / "device_extractions_Android"
+
+    @property
+    def staging_dir(self) -> Path:
+        """Scratch area for uploads in transit; outside the extraction roots
+        so partially processed archives never show up as backups."""
+        return self.data_dir / "staging"
+
+    def extraction_root(self, platform: str) -> Path:
+        return self.ios_dir if platform == "ios" else self.android_dir
 
 
 @lru_cache

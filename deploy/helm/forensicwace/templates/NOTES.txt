@@ -16,6 +16,22 @@ Evidence volume: copy extractions into the '{{ include "fw.evidenceClaim" . }}' 
   data/device_extractions_IOS/<UDID>/...
   data/device_extractions_Android/<extraction>/msgstore.db
 
+{{- if include "fw.s3Enabled" . }}
+Or upload backups as ZIP archives from the web UI (Projects page): they are
+stored durably on {{ if .Values.minio.enabled }}the in-cluster MinIO{{ else }}{{ .Values.minio.externalEndpoint }}{{ end }} (bucket '{{ .Values.minio.bucket }}')
+and hydrated into the evidence volume as working copies.
+{{- if .Values.minio.enabled }}
+MinIO console:
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "fw.fullname" . }}-minio 9001:9001
+WARNING: the in-cluster single-node MinIO is intended for labs; for
+production point minio.externalEndpoint to a managed S3/MinIO
+(minio.enabled=false).
+{{- end }}
+{{- else }}
+NOTE: object storage is disabled (minio.enabled=false, no externalEndpoint) —
+browser uploads from the Projects page are unavailable.
+{{- end }}
+
 {{- if .Values.worker.keda.enabled }}
 Worker autoscaling: KEDA scales {{ include "fw.fullname" . }}-worker between
 {{ .Values.worker.keda.minReplicas }} and {{ .Values.worker.keda.maxReplicas }} replicas on the depth of the

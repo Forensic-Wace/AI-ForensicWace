@@ -17,6 +17,7 @@ from forensicwace_core.backups.android import resolve_db_path
 from forensicwace_core.backups.ios import chatstorage_path, resolve_backup_dir
 from forensicwace_core.config import get_settings
 from forensicwace_core.constants import Platform
+from forensicwace_core.analysis import registry
 from forensicwace_core.analysis.dispatch import dispatch_analysis
 from forensicwace_core.resultsdb import repositories
 from forensicwace_core.resultsdb.engine import session_scope
@@ -48,6 +49,10 @@ def _to_process_out(process: ProcessStatus) -> ProcessOut:
 
 @router.post("", response_model=AnalysisSubmitted, status_code=202)
 def submit_analysis(request: AnalysisRequest):
+    problems = registry.validate_requested(request.analyzers)
+    if problems:
+        raise HTTPException(status_code=422, detail="; ".join(problems))
+
     settings = get_settings()
     if request.platform == Platform.ANDROID:
         db_path = resolve_db_path(settings.android_dir, request.backup_id, request.db_file)
@@ -129,8 +134,25 @@ def get_analysis_results(process_id: str):
                 msg_id=text.msg_id,
                 text=text.text,
                 date=text.date,
-                piis=[FindingOut(type=p.type, value=p.value, source=p.source) for p in text.piis],
-                passwords=[FindingOut(value=p.password, source=p.source) for p in text.passwords],
+                piis=[
+                    FindingOut(
+                        type=p.type,
+                        value=p.value,
+                        source=p.source,
+                        analyzer_version=p.analyzer_version,
+                        analyzer_digest=p.analyzer_digest,
+                    )
+                    for p in text.piis
+                ],
+                passwords=[
+                    FindingOut(
+                        value=p.password,
+                        source=p.source,
+                        analyzer_version=p.analyzer_version,
+                        analyzer_digest=p.analyzer_digest,
+                    )
+                    for p in text.passwords
+                ],
             )
             for text in repositories.get_texts_by_process(session, process_id)
         ]

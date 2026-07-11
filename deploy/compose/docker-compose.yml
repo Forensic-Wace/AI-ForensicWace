@@ -4,8 +4,10 @@
 #   docker compose --profile core --profile analyzers-local up  # + Whisper & Tesseract
 #
 # Put evidence extractions in ../../data/device_extractions_IOS and
-# ../../data/device_extractions_Android (never commit them), then open
-# the web UI at http://localhost:3000 (API docs: http://localhost:8080/docs)
+# ../../data/device_extractions_Android (never commit them) — or upload
+# them as ZIPs from the Projects page (stored on MinIO). Web UI at
+# http://localhost:3000 (API docs: http://localhost:8080/docs, MinIO
+# console: http://localhost:9001)
 #
 # DeepPass and LAVIS have no public images; clone the forks next to this
 # repository and uncomment their services below.
@@ -39,22 +41,45 @@ services:
       timeout: 5s
       retries: 10
 
+  minio:
+    image: minio/minio:latest
+    profiles: [core]
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-forensicwace}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-forensicwace}
+    volumes:
+      - minio-data:/data
+    ports:
+      - "9001:9001"   # web console (bucket is created automatically by the API)
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   api:
     build:
       context: ../..
       dockerfile: services/api/Dockerfile
       args:
-        CORE_EXTRAS: ${CORE_EXTRAS:-postgres}
+        CORE_EXTRAS: ${CORE_EXTRAS:-postgres,s3}
     profiles: [core]
     depends_on:
       postgres:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+      minio:
+        condition: service_healthy
     environment:
       FW_DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-forensicwace}:${POSTGRES_PASSWORD:-forensicwace}@postgres:5432/${POSTGRES_DB:-forensic_wace}
       FW_BROKER_URL: amqp://guest:guest@rabbitmq:5672//
       FW_DATA_DIR: /data
+      FW_S3_ENDPOINT: ${FW_S3_ENDPOINT:-http://minio:9000}
+      FW_S3_ACCESS_KEY: ${MINIO_ROOT_USER:-forensicwace}
+      FW_S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-forensicwace}
+      FW_S3_BUCKET: ${FW_S3_BUCKET:-forensicwace-evidence}
       FW_DEEPPASS_ENDPOINT: ${FW_DEEPPASS_ENDPOINT:-}
       FW_WHISPER_ENDPOINT: ${FW_WHISPER_ENDPOINT:-http://whisper:9000/asr}
       FW_TESSERACT_ENDPOINT: ${FW_TESSERACT_ENDPOINT:-http://tesseract:8884/v1/ocr}
@@ -82,7 +107,7 @@ services:
       context: ../..
       dockerfile: services/worker/Dockerfile
       args:
-        CORE_EXTRAS: ${CORE_EXTRAS:-postgres}
+        CORE_EXTRAS: ${CORE_EXTRAS:-postgres,s3}
     profiles: [core]
     depends_on:
       postgres:
@@ -93,6 +118,10 @@ services:
       FW_DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-forensicwace}:${POSTGRES_PASSWORD:-forensicwace}@postgres:5432/${POSTGRES_DB:-forensic_wace}
       FW_BROKER_URL: amqp://guest:guest@rabbitmq:5672//
       FW_DATA_DIR: /data
+      FW_S3_ENDPOINT: ${FW_S3_ENDPOINT:-http://minio:9000}
+      FW_S3_ACCESS_KEY: ${MINIO_ROOT_USER:-forensicwace}
+      FW_S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-forensicwace}
+      FW_S3_BUCKET: ${FW_S3_BUCKET:-forensicwace-evidence}
       FW_DEEPPASS_ENDPOINT: ${FW_DEEPPASS_ENDPOINT:-}
       FW_WHISPER_ENDPOINT: ${FW_WHISPER_ENDPOINT:-http://whisper:9000/asr}
       FW_TESSERACT_ENDPOINT: ${FW_TESSERACT_ENDPOINT:-http://tesseract:8884/v1/ocr}
@@ -154,3 +183,4 @@ services:
 
 volumes:
   postgres-data:
+  minio-data:

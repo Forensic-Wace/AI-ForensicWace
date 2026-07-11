@@ -61,6 +61,9 @@ class Finding:
     value: str
     source: str
     entity_type: str | None = None  # for PII
+    # Provenance (chain of custody): exactly which analyzer build produced this
+    analyzer_version: str | None = None
+    analyzer_digest: str | None = None
 
 
 @dataclass

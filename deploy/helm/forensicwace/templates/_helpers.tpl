@@ -47,10 +47,49 @@ amqp://{{ .Values.rabbitmq.auth.username }}:{{ .Values.rabbitmq.auth.password }}
 {{- end -}}
 {{- end -}}
 
+{{/* Object storage (projects uploads): in-cluster MinIO or external S3 */}}
+{{- define "fw.s3Enabled" -}}
+{{- if or .Values.minio.enabled .Values.minio.externalEndpoint -}}true{{- end -}}
+{{- end -}}
+
+{{- define "fw.s3Endpoint" -}}
+{{- if .Values.minio.enabled -}}
+http://{{ include "fw.fullname" . }}-minio:9000
+{{- else -}}
+{{- .Values.minio.externalEndpoint -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "fw.s3AccessKey" -}}
+{{- if .Values.minio.enabled -}}
+{{- .Values.minio.auth.rootUser -}}
+{{- else -}}
+{{- required "minio.externalAccessKey is required with minio.externalEndpoint" .Values.minio.externalAccessKey -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "fw.s3SecretKey" -}}
+{{- if .Values.minio.enabled -}}
+{{- .Values.minio.auth.rootPassword -}}
+{{- else -}}
+{{- required "minio.externalSecretKey is required with minio.externalEndpoint" .Values.minio.externalSecretKey -}}
+{{- end -}}
+{{- end -}}
+
 {{/* Environment shared by api and worker */}}
 {{- define "fw.sharedEnv" -}}
 - name: FW_DATA_DIR
   value: /data
+{{- if include "fw.s3Enabled" . }}
+- name: FW_S3_ENDPOINT
+  value: {{ include "fw.s3Endpoint" . | quote }}
+- name: FW_S3_BUCKET
+  value: {{ .Values.minio.bucket | quote }}
+{{- with .Values.minio.region }}
+- name: FW_S3_REGION
+  value: {{ . | quote }}
+{{- end }}
+{{- end }}
 {{- range $name, $value := .Values.extraEnv }}
 - name: {{ $name }}
   value: {{ $value | quote }}

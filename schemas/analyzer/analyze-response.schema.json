@@ -1,0 +1,119 @@
+{
+  "$defs": {
+    "ContractFinding": {
+      "properties": {
+        "kind": {
+          "enum": [
+            "pii",
+            "password"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "string"
+        },
+        "entity_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Entity Type"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confidence"
+        }
+      },
+      "required": [
+        "kind",
+        "value"
+      ],
+      "title": "ContractFinding",
+      "type": "object"
+    },
+    "Enrichment": {
+      "properties": {
+        "transcription": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Transcription"
+        },
+        "ocr_text": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ocr Text"
+        },
+        "caption": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Caption"
+        }
+      },
+      "title": "Enrichment",
+      "type": "object"
+    }
+  },
+  "description": "Text analyzers return findings; media analyzers return enrichment.",
+  "properties": {
+    "findings": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/ContractFinding"
+      },
+      "title": "Findings",
+      "type": "array"
+    },
+    "enrichment": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Enrichment"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "title": "AnalyzeResponse",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -21,6 +21,14 @@ class ConfigurationError(ForensicWaceError):
     """A required setting is missing for the requested operation."""
 
 
+class InvalidArchiveError(ForensicWaceError):
+    """An uploaded backup archive is malformed, unsafe or not a backup."""
+
+
+class StorageError(ForensicWaceError):
+    """The object storage backend failed or is unreachable."""
+
+
 class UnknownSchemaError(ForensicWaceError):
     """No schema descriptor matches the evidence database.
 

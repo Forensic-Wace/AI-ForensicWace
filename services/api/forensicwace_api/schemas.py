@@ -33,6 +33,34 @@ class AnalyzerStatusOut(BaseModel):
     detail: str = ""
 
 
+class InstalledAnalyzerOut(BaseModel):
+    key: str
+    name: str
+    version: str
+    type: str  # builtin | http
+    capabilities: list[str]
+    input: str  # text | audio | image
+    trust: str  # local | cloud
+    enabled: bool
+    endpoint: str | None = None
+    image_digest: str | None = None
+    config: dict = {}
+
+
+class AnalyzerRegister(BaseModel):
+    """Bring-your-own-container registration: the manifest is fetched from
+    the endpoint and is authoritative for key/name/capabilities."""
+
+    endpoint: str = Field(min_length=1, description="Base URL of a fw-analyzer/1 container")
+    config: dict = {}
+    enabled: bool = True
+
+
+class AnalyzerUpdate(BaseModel):
+    enabled: bool | None = None
+    config: dict | None = None
+
+
 class PrivateChatOut(BaseModel):
     counters: dict
     messages: list[dict]
@@ -75,6 +103,9 @@ class FindingOut(BaseModel):
     type: str | None = None
     value: str | None = None
     source: str
+    # provenance: exact analyzer build (chain of custody)
+    analyzer_version: str | None = None
+    analyzer_digest: str | None = None
 
 
 class TextResultOut(BaseModel):
@@ -87,3 +118,35 @@ class TextResultOut(BaseModel):
 
 class ReportVerification(BaseModel):
     verified: bool
+
+
+class ProjectCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    description: str = ""
+
+
+class ProjectBackupOut(BaseModel):
+    id: str
+    platform: str
+    identifier: str
+    status: str
+    detail: str | None = None
+    original_filename: str | None = None
+    size_bytes: int = 0
+    file_count: int = 0
+    uploaded_at: datetime | None = None
+    completed_at: datetime | None = None
+    # computed: a working copy exists in the local extraction root
+    hydrated: bool = False
+
+
+class ProjectOut(BaseModel):
+    id: str
+    name: str
+    description: str | None = None
+    created_at: datetime | None = None
+    backup_count: int = 0
+
+
+class ProjectDetailOut(ProjectOut):
+    backups: list[ProjectBackupOut] = []

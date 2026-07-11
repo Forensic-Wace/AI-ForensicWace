@@ -1,11 +1,12 @@
-"""Liveness/readiness probes and analyzer availability."""
+"""Liveness/readiness probes.
+
+Analyzer availability lives in the analyzers router (same URL as before:
+``/api/v1/analyzers/status``), backed by the dynamic registry.
+"""
 
 from fastapi import APIRouter
 
 from forensicwace_core import __version__
-from forensicwace_core.analysis.analyzers import all_statuses
-
-from ..schemas import AnalyzerStatusOut
 
 router = APIRouter(tags=["health"])
 
@@ -18,9 +19,3 @@ def healthz() -> dict:
 @router.get("/readyz")
 def readyz() -> dict:
     return {"status": "ready"}
-
-
-@router.get("/api/v1/analyzers/status", response_model=list[AnalyzerStatusOut])
-def analyzers_status():
-    """Health check of every configured AI analyzer (may be slow: calls out)."""
-    return [AnalyzerStatusOut(name=s.name, available=s.available, detail=str(s.detail)) for s in all_statuses()]

@@ -2,7 +2,8 @@
 
 Deploys the full platform on Kubernetes: stateless API (FastAPI, HPA on CPU),
 Celery analysis workers (KEDA autoscaling on RabbitMQ queue depth), React
-frontend, and optional in-cluster PostgreSQL and RabbitMQ.
+frontend, and optional in-cluster PostgreSQL, RabbitMQ and MinIO (the object
+storage backing browser uploads from the Projects page).
 
 ## Prerequisites
 
@@ -15,8 +16,10 @@ frontend, and optional in-cluster PostgreSQL and RabbitMQ.
   ```
 - For autoscaling: [KEDA](https://keda.sh/docs/latest/deploy/) installed in the cluster
 - For multi-node clusters: a ReadWriteMany StorageClass for the evidence
-  volume (NFS, EFS, Longhorn, ...) — S3/MinIO evidence storage is on the
-  roadmap to remove this requirement
+  volume (NFS, EFS, Longhorn, ...). Backups uploaded through the Projects
+  page live durably in object storage (in-cluster MinIO by default, or an
+  external S3 via `minio.externalEndpoint`); the evidence volume holds
+  their hydrated working copies
 
 ## Install
 
@@ -53,6 +56,8 @@ Load-test it: submit an analysis over a large chat and watch
 | `evidence.accessModes` | `[ReadWriteMany]` | RWO works on single-node clusters |
 | `postgresql.enabled` | `true` | Lab-grade single node; use `externalUrl` in production |
 | `rabbitmq.enabled` | `true` | Same |
+| `minio.enabled` | `true` | Same — use `minio.externalEndpoint` + keys for managed S3; disable both to turn off browser uploads |
+| `minio.bucket` | `forensicwace-evidence` | Created automatically on first use |
 | `analyzerSecrets` | `{}` | FW_* credentials (Secret) |
 | `extraEnv` | `{}` | FW_* plain env (endpoints, toggles) |
 | `ingress.enabled` | `false` | Frontend ingress |

@@ -51,21 +51,27 @@ def _transcribe_azure(wav_path: Path) -> str:
     return recognizer.recognize_once_async().get().text
 
 
-def transcribe(message: Message) -> None:
-    """Populate ``message.transcription`` from its audio file."""
+def _audio_as_wav(message: Message) -> Path | None:
     if message.media_path is None:
-        return
-
-    audio_path = message.media_path
+        return None
     mime = message.mime_type or ""
     if "opus" in mime or "mp4" in mime:
-        audio_path = _to_wav(audio_path)
+        return _to_wav(message.media_path)
+    return message.media_path
 
-    settings = get_settings()
-    if settings.use_ms_s2t and settings.ms_s2t_key:
-        message.transcription = _transcribe_azure(audio_path)
-    elif settings.whisper_endpoint:
+
+def transcribe_whisper(message: Message) -> None:
+    """Populate ``message.transcription`` via the Whisper ASR sidecar."""
+    audio_path = _audio_as_wav(message)
+    if audio_path is not None and get_settings().whisper_endpoint:
         message.transcription = _transcribe_whisper(audio_path)
+
+
+def transcribe_azure(message: Message) -> None:
+    """Populate ``message.transcription`` via Azure Speech-to-Text."""
+    audio_path = _audio_as_wav(message)
+    if audio_path is not None and get_settings().ms_s2t_key:
+        message.transcription = _transcribe_azure(audio_path)
 
 
 def _test_audio_path() -> Path | None:

@@ -17,12 +17,14 @@ from forensicwace_core.exceptions import (
     BackupNotFoundError,
     ConfigurationError,
     ExtractionError,
+    InvalidArchiveError,
     InvalidIdentifierError,
+    StorageError,
     UnknownSchemaError,
     UnsupportedCapabilityError,
 )
 
-from .routers import analyses, backups, chats_android, chats_ios, health, reports, schemas
+from .routers import analyses, analyzers, backups, chats_android, chats_ios, health, projects, reports, schemas
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +32,8 @@ _ERROR_STATUS = {
     InvalidIdentifierError: 400,
     BackupNotFoundError: 404,
     ExtractionError: 422,
+    InvalidArchiveError: 422,
+    StorageError: 502,
     ConfigurationError: 503,
 }
 
@@ -37,10 +41,12 @@ _ERROR_STATUS = {
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     if get_settings().database_url:
+        from forensicwace_core.analysis.registry import sync_builtin_analyzers
         from forensicwace_core.resultsdb.engine import init_db
 
         try:
             init_db()
+            sync_builtin_analyzers()
         except Exception:
             logger.exception("Results database unavailable — analysis endpoints will fail until it is reachable")
     yield
@@ -76,6 +82,8 @@ def create_app() -> FastAPI:
     app.include_router(chats_ios.router, prefix=prefix)
     app.include_router(chats_android.router, prefix=prefix)
     app.include_router(analyses.router, prefix=prefix)
+    app.include_router(analyzers.router, prefix=prefix)
+    app.include_router(projects.router, prefix=prefix)
     app.include_router(reports.router, prefix=prefix)
     app.include_router(schemas.router, prefix=prefix)
     return app

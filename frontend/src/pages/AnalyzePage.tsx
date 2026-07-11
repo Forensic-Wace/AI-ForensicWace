@@ -1,24 +1,15 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import { api, type Platform } from "../api/client";
+import { api, type InstalledAnalyzer, type Platform } from "../api/client";
 import { ErrorBox, Loading } from "../components";
 import { useLoad } from "../hooks";
 
-const TEXT_ANALYZERS = [
-  { key: "presidio", label: "Presidio (local PII)" },
-  { key: "starpii", label: "StarPII (local NER)" },
-  { key: "deep_password", label: "DeepPass (passwords)" },
-  { key: "microsoftPII", label: "Azure Text Analytics PII" },
-  { key: "gpt", label: "OpenAI GPT assistant" },
-];
-
-const MEDIA_ANALYZERS = [
-  { key: "S2T", label: "Audio transcription (Whisper / Azure S2T)" },
-  { key: "image_OCR", label: "Image OCR + captioning (Tesseract+LAVIS / Azure CV)" },
-];
-
 const MESSAGE_TYPES = ["text", "image", "audio", "video", "gif", "location", "url", "file"];
+
+function analyzerLabel(analyzer: InstalledAnalyzer): string {
+  return analyzer.trust === "cloud" ? `${analyzer.name} ☁ cloud` : analyzer.name;
+}
 
 function MultiCheck({
   options,
@@ -49,6 +40,11 @@ export default function AnalyzePage() {
 
   const chats = useLoad(() => api.chats(platform!, backupId!), [platform, backupId]);
   const groups = useLoad(() => api.groups(platform!, backupId!), [platform, backupId]);
+  const installed = useLoad(() => api.listAnalyzers(), []);
+
+  const available = (installed.data ?? []).filter((a) => a.enabled);
+  const textAnalyzers = available.filter((a) => a.input === "text");
+  const mediaAnalyzers = available.filter((a) => a.input !== "text");
 
   const [contacts, setContacts] = useState<string[]>([]);
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
@@ -98,8 +94,8 @@ export default function AnalyzePage() {
           Note: the analysis pipeline currently extracts messages from Android databases; iOS support is planned.
         </p>
       )}
-      <ErrorBox message={chats.error ?? groups.error ?? submitError} />
-      <Loading active={chats.loading || groups.loading} />
+      <ErrorBox message={chats.error ?? groups.error ?? installed.error ?? submitError} />
+      <Loading active={chats.loading || groups.loading || installed.loading} />
 
       <div className="card">
         <h3>Scope</h3>
@@ -156,14 +152,29 @@ export default function AnalyzePage() {
 
       <div className="card">
         <h3>Analyzers</h3>
-        <div className="field">
-          <label>Text analysis</label>
-          <MultiCheck options={TEXT_ANALYZERS} selected={analyzers} onChange={setAnalyzers} />
-        </div>
-        <div className="field">
-          <label>Media enrichment</label>
-          <MultiCheck options={MEDIA_ANALYZERS} selected={analyzers} onChange={setAnalyzers} />
-        </div>
+        {available.length === 0 && !installed.loading && (
+          <p className="muted">No analyzers installed or enabled — check the Analyzer status page.</p>
+        )}
+        {textAnalyzers.length > 0 && (
+          <div className="field">
+            <label>Text analysis</label>
+            <MultiCheck
+              options={textAnalyzers.map((a) => ({ key: a.key, label: analyzerLabel(a) }))}
+              selected={analyzers}
+              onChange={setAnalyzers}
+            />
+          </div>
+        )}
+        {mediaAnalyzers.length > 0 && (
+          <div className="field">
+            <label>Media enrichment</label>
+            <MultiCheck
+              options={mediaAnalyzers.map((a) => ({ key: a.key, label: analyzerLabel(a) }))}
+              selected={analyzers}
+              onChange={setAnalyzers}
+            />
+          </div>
+        )}
       </div>
 
       <button onClick={submit} disabled={submitting || nothingSelected || analyzers.length === 0}>

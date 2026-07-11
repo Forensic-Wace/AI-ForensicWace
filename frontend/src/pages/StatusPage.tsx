@@ -14,8 +14,8 @@ export default function StatusPage() {
         </button>
       </div>
       <p className="muted">
-        Analyzers are configured on the server through FW_* environment variables (see .env.example). This page runs a
-        live health check of every configured analyzer.
+        Live health check of every installed analyzer — built-ins (configured through FW_* environment variables) and
+        analyzers registered at runtime through the registry API.
       </p>
       <ErrorBox message={error} />
       <Loading active={loading && !data} />

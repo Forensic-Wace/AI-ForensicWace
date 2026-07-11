@@ -2,12 +2,12 @@
 #   docker build -f services/api/Dockerfile .
 #
 # CORE_EXTRAS selects the analyzer stacks baked into the image:
-#   postgres (default) | presidio | starpii (pulls torch, large!) | azure | openai
-#   e.g. --build-arg CORE_EXTRAS=postgres,presidio,azure,openai
+#   postgres,s3 (default) | presidio | starpii (pulls torch, large!) | azure | openai
+#   e.g. --build-arg CORE_EXTRAS=postgres,s3,presidio,azure,openai
 
 FROM python:3.12-slim
 
-ARG CORE_EXTRAS=postgres
+ARG CORE_EXTRAS=postgres,s3
 
 # ffmpeg converts voice notes to WAV before transcription
 RUN apt-get update \

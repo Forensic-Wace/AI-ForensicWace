@@ -54,13 +54,37 @@ ingress:
   tls: []
 
 # Evidence extractions volume, mounted at /data by api and workers.
-# NOTE: with more than one node this must be ReadWriteMany (NFS, EFS, ...);
-# object storage (S3/MinIO) support is on the roadmap to remove this need.
+# NOTE: with more than one node this must be ReadWriteMany (NFS, EFS, ...).
+# Backups uploaded through the projects UI live durably in object storage
+# (see minio below); this volume holds their hydrated working copies.
 evidence:
   existingClaim: ""
   size: 50Gi
   storageClass: ""
   accessModes: [ReadWriteMany]
+
+# Object storage for backups uploaded through the projects UI.
+# In-cluster single-node MinIO (fine for labs). For production set
+# enabled: false and point externalEndpoint to S3/MinIO, or leave both
+# empty to disable browser uploads entirely.
+minio:
+  enabled: true
+  image: minio/minio:latest
+  auth:
+    rootUser: forensicwace
+    rootPassword: forensicwace
+  bucket: forensicwace-evidence
+  persistence:
+    size: 50Gi
+    storageClass: ""
+  resources:
+    requests: { cpu: 250m, memory: 256Mi }
+    limits: { cpu: "1", memory: 1Gi }
+  # Used when enabled=false, e.g. https://s3.eu-south-1.amazonaws.com
+  externalEndpoint: ""
+  externalAccessKey: ""
+  externalSecretKey: ""
+  region: ""
 
 postgresql:
   # In-cluster single-node PostgreSQL (fine for labs). For production point

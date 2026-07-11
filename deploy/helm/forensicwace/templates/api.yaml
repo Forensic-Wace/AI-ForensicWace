@@ -39,9 +39,10 @@ spec:
           env:
             {{- include "fw.sharedEnv" . | nindent 12 }}
           volumeMounts:
+            # writable: browser uploads stage under /data/staging and hydrate
+            # working copies into the extraction roots
             - name: evidence
               mountPath: /data
-              readOnly: true
           livenessProbe:
             httpGet: { path: /healthz, port: 8080 }
             initialDelaySeconds: 10

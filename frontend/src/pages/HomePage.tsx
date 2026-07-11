@@ -23,6 +23,13 @@ export default function HomePage() {
             Browse Android backups
           </Link>
         </div>
+        <div className="card">
+          <h3>📁 Projects</h3>
+          <p className="muted">Upload backups from the browser into a case project, stored on S3/MinIO.</p>
+          <Link className="button" to="/projects">
+            Manage projects
+          </Link>
+        </div>
       </div>
     </>
   );
