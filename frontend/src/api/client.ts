@@ -67,6 +67,16 @@ export interface UserAccount {
   last_login: string | null;
 }
 
+export interface AuditEntry {
+  id: number;
+  at: string;
+  user_id: number | null;
+  username: string | null;
+  action: string;
+  resource: string | null;
+  detail: string | null;
+}
+
 export interface IosBackup {
   udid: string;
   device_name: string | null;
@@ -290,6 +300,7 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     }),
+  listAudit: (limit = 200) => request<AuditEntry[]>(`/audit?limit=${limit}`),
 
   listIosBackups: () => request<IosBackup[]>("/backups/ios"),
   listAndroidBackups: () => request<AndroidBackup[]>("/backups/android"),

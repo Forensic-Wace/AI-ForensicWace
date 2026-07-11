@@ -38,6 +38,16 @@ class UserOut(BaseModel):
     last_login: datetime | None = None
 
 
+class AuditEntryOut(BaseModel):
+    id: int
+    at: datetime
+    user_id: int | None = None
+    username: str | None = None
+    action: str
+    resource: str | None = None
+    detail: str | None = None
+
+
 class IosBackup(BaseModel):
     udid: str
     device_name: str | None = None

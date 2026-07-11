@@ -2,6 +2,7 @@ import { NavLink, Route, Routes, useParams } from "react-router-dom";
 
 import { useAuth } from "./auth";
 import AnalyzePage from "./pages/AnalyzePage";
+import AuditPage from "./pages/AuditPage";
 import LoginPage from "./pages/LoginPage";
 import UsersPage from "./pages/UsersPage";
 import BackupOverviewPage from "./pages/BackupOverviewPage";
@@ -64,6 +65,7 @@ export default function App() {
           <NavLink to="/verify">Verify report</NavLink>
           <NavLink to="/status">Analyzer status</NavLink>
           {user.role === "admin" && !user.auth_disabled && <NavLink to="/users">Users</NavLink>}
+          {user.role === "admin" && <NavLink to="/audit">Audit trail</NavLink>}
           <Routes>
             <Route path="/:platform/:backupId/*" element={<BackupNav />} />
             <Route path="*" element={null} />
@@ -99,6 +101,7 @@ export default function App() {
           <Route path="/verify" element={<VerifyReportPage />} />
           <Route path="/status" element={<StatusPage />} />
           <Route path="/users" element={<UsersPage />} />
+          <Route path="/audit" element={<AuditPage />} />
         </Routes>
       </main>
     </div>

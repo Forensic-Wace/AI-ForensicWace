@@ -9,7 +9,7 @@ from forensicwace_core.config import get_settings
 from forensicwace_core.resultsdb.engine import session_scope
 from forensicwace_core.resultsdb.models import User
 
-from .. import auth
+from .. import audit, auth
 from ..schemas import LoginRequest, MeOut
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -31,6 +31,7 @@ def login(body: LoginRequest, response: Response):
             or not auth.verify_password(user.password_hash, body.password)
         ):
             auth.record_login_failure(body.username)
+            audit.record(None, "auth.login_failed", resource=body.username)
             raise HTTPException(status_code=401, detail="Invalid credentials")
         user.last_login = datetime.now(timezone.utc)
         token = auth.issue_token(user)
@@ -38,12 +39,14 @@ def login(body: LoginRequest, response: Response):
 
     auth.reset_login_failures(body.username)
     auth.set_session_cookie(response, token)
+    audit.record(auth.AuthUser(id=out.id, username=out.username, role=out.role), "auth.login")
     return out
 
 
 @router.post("/logout", status_code=204)
 def logout(response: Response, user: auth.AuthUser = Depends(auth.get_current_user)):
     auth.clear_session_cookie(response)
+    audit.record(user, "auth.logout")
 
 
 @router.get("/me", response_model=MeOut)

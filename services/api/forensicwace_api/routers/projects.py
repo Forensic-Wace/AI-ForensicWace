@@ -29,6 +29,7 @@ from forensicwace_core.resultsdb.engine import session_scope
 from forensicwace_core.resultsdb.models import Project, ProjectBackup
 from forensicwace_core.storage import get_object_storage
 
+from .. import audit
 from ..auth import AuthUser, get_current_user
 from ..schemas import ProjectBackupOut, ProjectCreate, ProjectDetailOut, ProjectOut
 
@@ -80,7 +81,9 @@ def create_project(request: ProjectCreate, user: AuthUser = Depends(get_current_
     with session_scope() as session:
         session.add(project)
         session.flush()
-        return _to_project_out(project)
+        out = _to_project_out(project)
+    audit.record(user, "project.created", resource=request.name)
+    return out
 
 
 @router.get("", response_model=list[ProjectOut])
@@ -102,7 +105,7 @@ def project_detail(project_id: str):
 
 
 @router.delete("/{project_id}", status_code=204)
-def delete_project(project_id: str):
+def delete_project(project_id: str, user: AuthUser = Depends(get_current_user)):
     """Remove the project: database records and every object under its
     storage prefix. Hydrated working copies in the extraction roots are kept."""
     with session_scope() as session:
@@ -110,9 +113,11 @@ def delete_project(project_id: str):
         if project is None:
             raise HTTPException(status_code=404, detail="Project not found")
         had_backups = bool(project.backups)
+        name = project.name
         session.delete(project)
     if had_backups:
         get_object_storage().delete_prefix(f"projects/{project_id}/")
+    audit.record(user, "project.deleted", resource=name, detail=f"backups_removed={had_backups}")
 
 
 @router.post("/{project_id}/backups", response_model=ProjectBackupOut, status_code=202)
@@ -172,6 +177,10 @@ def upload_backup(
         out = _to_backup_out(backup)
 
     background.add_task(_process_upload, backup_id, staging_path, auto_hydrate)
+    audit.record(
+        user, "backup.uploaded", resource=f"{platform.value}/{identifier}",
+        detail=f"project={project_id} files={inventory.file_count} bytes={inventory.total_bytes}",
+    )
     return out
 
 
@@ -185,7 +194,7 @@ def backup_status(project_id: str, backup_id: str):
 
 
 @router.post("/{project_id}/backups/{backup_id}/hydrate", response_model=ProjectBackupOut, status_code=202)
-def hydrate_backup(project_id: str, backup_id: str, background: BackgroundTasks):
+def hydrate_backup(project_id: str, backup_id: str, background: BackgroundTasks, user: AuthUser = Depends(get_current_user)):
     """Materialize a working copy from object storage into the extraction
     root (e.g. after the local volume was wiped or on another node)."""
     get_object_storage()
@@ -200,11 +209,12 @@ def hydrate_backup(project_id: str, backup_id: str, background: BackgroundTasks)
         out = _to_backup_out(backup)
 
     background.add_task(_hydrate_from_storage, backup_id)
+    audit.record(user, "backup.hydrated", resource=f"{out.platform}/{out.identifier}", detail=f"project={project_id}")
     return out
 
 
 @router.delete("/{project_id}/backups/{backup_id}", status_code=204)
-def delete_backup(project_id: str, backup_id: str, purge_local: bool = False):
+def delete_backup(project_id: str, backup_id: str, purge_local: bool = False, user: AuthUser = Depends(get_current_user)):
     """Remove the backup from object storage and the project. The hydrated
     working copy is kept unless ``purge_local`` is set."""
     with session_scope() as session:
@@ -218,6 +228,7 @@ def delete_backup(project_id: str, backup_id: str, purge_local: bool = False):
         local_dir = get_settings().extraction_root(platform) / identifier
         if local_dir.is_dir():
             shutil.rmtree(local_dir)
+    audit.record(user, "backup.deleted", resource=f"{platform}/{identifier}", detail=f"project={project_id} purge_local={purge_local}")
 
 
 # --- Background steps -------------------------------------------------------

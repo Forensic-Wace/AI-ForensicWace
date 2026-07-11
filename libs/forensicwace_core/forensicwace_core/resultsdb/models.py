@@ -160,6 +160,24 @@ class Analyzer(Base):
     updated_at = Column(DateTime(timezone=True))
 
 
+class AuditLog(Base):
+    """Append-only operator action trail (chain of custody).
+
+    ``username`` is denormalized on purpose: the entry must stay legible even
+    if the account is later renamed or removed.
+    """
+
+    __tablename__ = "audit_log"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    at = Column(DateTime(timezone=True), nullable=False, index=True)
+    user_id = Column(Integer)
+    username = Column(String(64))
+    action = Column(String(50), nullable=False, index=True)
+    resource = Column(String(255))
+    detail = Column(String)
+
+
 class ProcessStatus(Base):
     __tablename__ = "process_status"
 

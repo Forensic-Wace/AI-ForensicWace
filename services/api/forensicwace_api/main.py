@@ -26,7 +26,7 @@ from forensicwace_core.exceptions import (
 )
 
 from .auth import ensure_bootstrap_admin, get_current_user
-from .routers import analyses, analyzers, auth, backups, chats_android, chats_ios, health, projects, reports, schemas, users
+from .routers import analyses, analyzers, audit, auth, backups, chats_android, chats_ios, health, projects, reports, schemas, users
 
 logger = logging.getLogger(__name__)
 
@@ -87,6 +87,7 @@ def create_app() -> FastAPI:
     app.include_router(reports.router, prefix=prefix, dependencies=protected)
     app.include_router(schemas.router, prefix=prefix, dependencies=protected)
     app.include_router(users.router, prefix=prefix)  # require_admin at router level
+    app.include_router(audit.router, prefix=prefix)  # require_admin at router level
     return app
 
 

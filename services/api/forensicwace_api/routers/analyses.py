@@ -23,6 +23,7 @@ from forensicwace_core.resultsdb import repositories
 from forensicwace_core.resultsdb.engine import session_scope
 from forensicwace_core.resultsdb.models import ProcessStatus
 
+from .. import audit
 from ..auth import AuthUser, get_current_user
 from ..schemas import AnalysisRequest, AnalysisSubmitted, FindingOut, ProcessOut, TextResultOut
 
@@ -83,6 +84,10 @@ def submit_analysis(request: AnalysisRequest, user: AuthUser = Depends(get_curre
         process_id = process.process_id
 
     dispatch_analysis(process_id)
+    audit.record(
+        user, "analysis.submitted", resource=f"{request.platform}/{request.backup_id}",
+        detail=f"process={process_id} analyzers={','.join(request.analyzers) or '-'}",
+    )
     return AnalysisSubmitted(process_id=process_id, status="Started")
 
 

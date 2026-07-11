@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import FileResponse
 
 from forensicwace_core.backups.ios import resolve_backup_dir
@@ -11,9 +11,16 @@ from forensicwace_core.constants import IOS_MESSAGE_TYPE_FILTERS
 from forensicwace_core.reporting import chat_pdf, tables, timestamping
 from forensicwace_core.whatsapp import ios
 
+from .. import audit
+from ..auth import AuthUser, get_current_user
 from ..schemas import PrivateChatOut
 
 router = APIRouter(prefix="/backups/ios/{udid}", tags=["ios"])
+
+
+def _audit_export(request: Request, user: AuthUser = Depends(get_current_user)) -> None:
+    """Signed exports leave the platform: always on the audit trail."""
+    audit.record(user, "report.exported", resource=request.url.path)
 
 _TYPE_FILTER_QUERY = Query(default=None, description=f"One of: {', '.join(IOS_MESSAGE_TYPE_FILTERS)}")
 
@@ -72,38 +79,38 @@ def media(udid: str, relative_path: str | None = None, profile_of: str | None = 
 # --- Signed PDF exports -----------------------------------------------------
 
 
-@router.get("/exports/chat-list")
+@router.get("/exports/chat-list", dependencies=[Depends(_audit_export)])
 def export_chat_list(udid: str):
     pdf = tables.chat_list_pdf(ios.get_chat_list(_backup_dir(udid)))
     return _zip_response(timestamping.sign_and_zip(pdf, f"{udid}-ChatList"))
 
 
-@router.get("/exports/gps-locations")
+@router.get("/exports/gps-locations", dependencies=[Depends(_audit_export)])
 def export_gps_locations(udid: str):
     pdf = tables.gps_locations_pdf(ios.get_gps_locations(_backup_dir(udid)))
     return _zip_response(timestamping.sign_and_zip(pdf, f"{udid}-GpsLocations"))
 
 
-@router.get("/exports/blocked-contacts")
+@router.get("/exports/blocked-contacts", dependencies=[Depends(_audit_export)])
 def export_blocked_contacts(udid: str):
     pdf = tables.blocked_contacts_pdf(ios.get_blocked_contacts(_backup_dir(udid)))
     return _zip_response(timestamping.sign_and_zip(pdf, f"{udid}-BlockedContacts"))
 
 
-@router.get("/exports/group-list")
+@router.get("/exports/group-list", dependencies=[Depends(_audit_export)])
 def export_group_list(udid: str):
     pdf = tables.group_list_pdf(ios.get_group_list(_backup_dir(udid)))
     return _zip_response(timestamping.sign_and_zip(pdf, f"{udid}-GroupList"))
 
 
-@router.get("/exports/chats/{phone_number}")
+@router.get("/exports/chats/{phone_number}", dependencies=[Depends(_audit_export)])
 def export_private_chat(udid: str, phone_number: str):
     _, messages = ios.get_private_chat(_backup_dir(udid), phone_number)
     pdf = chat_pdf.chat_transcript_pdf(messages, contact_name_key="contactName")
     return _zip_response(timestamping.sign_and_zip(pdf, f"{udid}-PrivateChat-{phone_number}"))
 
 
-@router.get("/exports/groups/{group_name}")
+@router.get("/exports/groups/{group_name}", dependencies=[Depends(_audit_export)])
 def export_group_chat(udid: str, group_name: str):
     _, messages = ios.get_group_chat(_backup_dir(udid), group_name)
     pdf = chat_pdf.chat_transcript_pdf(messages, contact_name_key="contactName")

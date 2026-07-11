@@ -19,7 +19,8 @@ from forensicwace_core.analysis.analyzers import http_analyzer
 from forensicwace_core.resultsdb.engine import session_scope
 from forensicwace_core.resultsdb.models import Analyzer
 
-from ..auth import require_admin
+from .. import audit
+from ..auth import AuthUser, require_admin
 from ..schemas import AnalyzerRegister, AnalyzerStatusOut, AnalyzerUpdate, InstalledAnalyzerOut
 
 logger = logging.getLogger(__name__)
@@ -56,8 +57,8 @@ def analyzers_status():
     return [AnalyzerStatusOut(name=s.name, available=s.available, detail=str(s.detail)) for s in registry.all_statuses()]
 
 
-@router.post("", response_model=InstalledAnalyzerOut, status_code=201, dependencies=[Depends(require_admin)])
-def register_analyzer(request: AnalyzerRegister):
+@router.post("", response_model=InstalledAnalyzerOut, status_code=201)
+def register_analyzer(request: AnalyzerRegister, admin: AuthUser = Depends(require_admin)):
     """Register a running fw-analyzer/1 container; its manifest is authoritative."""
     try:
         manifest = http_analyzer.HttpAnalyzer(request.endpoint).manifest()
@@ -91,11 +92,13 @@ def register_analyzer(request: AnalyzerRegister):
         session.flush()
         out = _to_out(registry.resolved_from_row(row))
     registry.clear_registry_cache()
+    audit.record(admin, "analyzer.registered", resource=manifest.key,
+                 detail=f"endpoint={request.endpoint} version={manifest.version} trust={manifest.trust}")
     return out
 
 
-@router.patch("/{key}", response_model=InstalledAnalyzerOut, dependencies=[Depends(require_admin)])
-def update_analyzer(key: str, request: AnalyzerUpdate):
+@router.patch("/{key}", response_model=InstalledAnalyzerOut)
+def update_analyzer(key: str, request: AnalyzerUpdate, admin: AuthUser = Depends(require_admin)):
     with session_scope() as session:
         row = session.query(Analyzer).filter_by(key=key).first()
         if row is None:
@@ -108,11 +111,12 @@ def update_analyzer(key: str, request: AnalyzerUpdate):
         session.flush()
         out = _to_out(registry.resolved_from_row(row))
     registry.clear_registry_cache()
+    audit.record(admin, "analyzer.updated", resource=key, detail=str(request.model_dump(exclude_none=True)))
     return out
 
 
-@router.delete("/{key}", status_code=204, dependencies=[Depends(require_admin)])
-def uninstall_analyzer(key: str):
+@router.delete("/{key}", status_code=204)
+def uninstall_analyzer(key: str, admin: AuthUser = Depends(require_admin)):
     """Remove a runtime-installed analyzer. Built-ins can only be disabled."""
     with session_scope() as session:
         row = session.query(Analyzer).filter_by(key=key).first()
@@ -122,3 +126,4 @@ def uninstall_analyzer(key: str):
             raise HTTPException(status_code=409, detail="Built-in analyzers cannot be uninstalled — disable instead")
         session.delete(row)
     registry.clear_registry_cache()
+    audit.record(admin, "analyzer.uninstalled", resource=key)

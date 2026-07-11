@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from forensicwace_core.resultsdb.engine import session_scope
 from forensicwace_core.resultsdb.models import User
 
+from .. import audit
 from ..auth import AuthUser, hash_password, require_admin
 from ..schemas import UserCreate, UserOut, UserUpdate
 
@@ -37,7 +38,7 @@ def list_users():
 
 
 @router.post("", response_model=UserOut, status_code=201)
-def create_user(request: UserCreate):
+def create_user(request: UserCreate, admin: AuthUser = Depends(require_admin)):
     with session_scope() as session:
         if session.query(User).filter_by(username=request.username).first() is not None:
             raise HTTPException(status_code=409, detail=f"Username {request.username!r} already exists")
@@ -53,7 +54,9 @@ def create_user(request: UserCreate):
         )
         session.add(user)
         session.flush()
-        return _to_out(user)
+        out = _to_out(user)
+    audit.record(admin, "user.created", resource=request.username, detail=f"role={request.role}")
+    return out
 
 
 @router.patch("/{user_id}", response_model=UserOut)
@@ -77,4 +80,11 @@ def update_user(user_id: int, request: UserUpdate, admin: AuthUser = Depends(req
             revoke_sessions = True
         if revoke_sessions:
             user.token_version = (user.token_version or 0) + 1
-        return _to_out(user)
+        out = _to_out(user)
+        username = user.username
+    changes = request.model_dump(exclude_none=True)
+    changes.pop("password", None)
+    if request.password is not None:
+        changes["password"] = "reset"
+    audit.record(admin, "user.updated", resource=username, detail=str(changes))
+    return out
