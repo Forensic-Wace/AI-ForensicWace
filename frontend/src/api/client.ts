@@ -145,6 +145,32 @@ export interface InstalledAnalyzer {
   config: Record<string, unknown>;
 }
 
+export interface CatalogEntry {
+  key: string;
+  name: string;
+  version: string;
+  capabilities: Capability[];
+  input: "text" | "audio" | "image";
+  trust: "local" | "cloud";
+  gpu: boolean;
+  config_schema: Record<string, unknown>;
+  image: string;
+  image_digest: string;
+  port: number;
+  description: string;
+  publisher: string;
+  homepage: string;
+  installed: boolean;
+  installed_version: string | null;
+}
+
+export interface MarketplaceCatalog {
+  name: string;
+  verified: boolean;
+  provisioner: boolean;
+  entries: CatalogEntry[];
+}
+
 export interface AnalysisRequest {
   platform: Platform;
   backup_id: string;
@@ -340,11 +366,11 @@ export const api = {
 
   analyzersStatus: () => request<AnalyzerStatus[]>("/analyzers/status"),
   listAnalyzers: () => request<InstalledAnalyzer[]>("/analyzers"),
-  registerAnalyzer: (endpoint: string, config: Record<string, unknown> = {}) =>
+  registerAnalyzer: (endpoint: string, config: Record<string, unknown> = {}, consent = false) =>
     request<InstalledAnalyzer>("/analyzers", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ endpoint, config }),
+      body: JSON.stringify({ endpoint, config, consent }),
     }),
   updateAnalyzer: (key: string, body: { enabled?: boolean; config?: Record<string, unknown> }) =>
     request<InstalledAnalyzer>(`/analyzers/${encodeURIComponent(key)}`, {
@@ -353,6 +379,16 @@ export const api = {
       body: JSON.stringify(body),
     }),
   uninstallAnalyzer: (key: string) => requestDelete(`/analyzers/${encodeURIComponent(key)}`),
+  marketplaceCatalog: () => request<MarketplaceCatalog>("/marketplace"),
+  installFromCatalog: (
+    key: string,
+    body: { endpoint?: string; config?: Record<string, unknown>; consent?: boolean },
+  ) =>
+    request<InstalledAnalyzer>(`/marketplace/install/${encodeURIComponent(key)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }),
 
   submitAnalysis: (body: AnalysisRequest) =>
     request<{ process_id: string; status: string }>("/analyses", {

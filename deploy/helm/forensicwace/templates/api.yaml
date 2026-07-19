@@ -38,6 +38,14 @@ spec:
                 name: {{ include "fw.fullname" . }}
           env:
             {{- include "fw.sharedEnv" . | nindent 12 }}
+            {{- with .Values.marketplace.catalogUrl }}
+            - name: FW_CATALOG_URL
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.marketplace.catalogPublicKey }}
+            - name: FW_CATALOG_PUBLIC_KEY
+              value: {{ . | quote }}
+            {{- end }}
             {{- if .Values.auth.oidc.issuer }}
             - name: FW_OIDC_ISSUER
               value: {{ .Values.auth.oidc.issuer | quote }}

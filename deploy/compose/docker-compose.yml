@@ -102,8 +102,13 @@ services:
       FW_USE_MS_OCR_CAPTION: ${FW_USE_MS_OCR_CAPTION:-false}
       FW_USE_MS_PII: ${FW_USE_MS_PII:-false}
       FW_USE_OPENAI_GPT: ${FW_USE_OPENAI_GPT:-false}
+      # Analyzer marketplace: the repo's seed catalog, mounted read-only.
+      # Pin FW_CATALOG_PUBLIC_KEY to require a valid signature (production).
+      FW_CATALOG_URL: ${FW_CATALOG_URL:-file:///catalog/catalog.json}
+      FW_CATALOG_PUBLIC_KEY: ${FW_CATALOG_PUBLIC_KEY:-}
     volumes:
       - ../../data:/data
+      - ../../catalog:/catalog:ro
     ports:
       - "8080:8080"
 

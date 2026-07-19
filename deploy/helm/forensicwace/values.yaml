@@ -128,6 +128,11 @@ rabbitmq:
 # Authentication. Lab-grade defaults — ALWAYS override on a shared cluster.
 # jwtSecret must be >= 32 characters; the bootstrap admin is created at first
 # API startup. cookieSecure requires TLS on the ingress.
+# Analyzer marketplace: catalog of installable fw-analyzer/1 containers.
+marketplace:
+  catalogUrl: ""       # e.g. https://example.org/catalog.json (empty = disabled)
+  catalogPublicKey: "" # base64 Ed25519 (tools/sign_catalog.py); empty = catalog shown as unverified
+
 auth:
   jwtSecret: forensicwace-lab-secret-change-me-please
   adminUsername: admin

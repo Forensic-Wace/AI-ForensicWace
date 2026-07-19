@@ -13,6 +13,7 @@ import GpsPage from "./pages/GpsPage";
 import GroupChatPage from "./pages/GroupChatPage";
 import GroupsPage from "./pages/GroupsPage";
 import HomePage from "./pages/HomePage";
+import MarketplacePage from "./pages/MarketplacePage";
 import PrivateChatPage from "./pages/PrivateChatPage";
 import ProcessesPage from "./pages/ProcessesPage";
 import ProcessResultsPage from "./pages/ProcessResultsPage";
@@ -64,6 +65,7 @@ export default function App() {
           <NavLink to="/processes">AI processes</NavLink>
           <NavLink to="/verify">Verify report</NavLink>
           <NavLink to="/status">Analyzer status</NavLink>
+          <NavLink to="/marketplace">Marketplace</NavLink>
           {user.role === "admin" && !user.auth_disabled && <NavLink to="/users">Users</NavLink>}
           {user.role === "admin" && <NavLink to="/audit">Audit trail</NavLink>}
           <Routes>
@@ -100,6 +102,7 @@ export default function App() {
           <Route path="/processes/:processId" element={<ProcessResultsPage />} />
           <Route path="/verify" element={<VerifyReportPage />} />
           <Route path="/status" element={<StatusPage />} />
+          <Route path="/marketplace" element={<MarketplacePage />} />
           <Route path="/users" element={<UsersPage />} />
           <Route path="/audit" element={<AuditPage />} />
         </Routes>

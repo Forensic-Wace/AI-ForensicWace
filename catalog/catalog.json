@@ -1,0 +1,94 @@
+{
+  "format": "fw-catalog/1",
+  "name": "Forensic Wace analyzer catalog",
+  "entries": [
+    {
+      "manifest": {
+        "contract": "fw-analyzer/1",
+        "key": "deeppass",
+        "name": "DeepPass password detector (shim)",
+        "version": "1.0.0",
+        "capabilities": ["password"],
+        "input": "text",
+        "trust": "local"
+      },
+      "image": "ghcr.io/forensic-wace/forensicwace-analyzer-shim@sha256:84953ef2010455d580634d850a20445e2f03cfe8c1d2726b2d321d537cc0354a",
+      "port": 9300,
+      "env": {
+        "FW_SHIM_TARGET": "deeppass",
+        "FW_SHIM_TARGET_URL": "http://deeppass:9009"
+      },
+      "description": "Model + regex password candidate detection, proxied to the DeepPass sidecar through the fw-analyzer/1 shim. Evidence never leaves the deployment.",
+      "publisher": "Forensic-Wace",
+      "homepage": "https://github.com/Forensic-Wace/AI-ForensicWace"
+    },
+    {
+      "manifest": {
+        "contract": "fw-analyzer/1",
+        "key": "whisper_asr",
+        "name": "Whisper ASR transcription (shim)",
+        "version": "1.0.0",
+        "capabilities": ["transcription"],
+        "input": "audio",
+        "resources": { "cpu": "2", "memory": "4Gi", "gpu": false },
+        "trust": "local"
+      },
+      "image": "ghcr.io/forensic-wace/forensicwace-analyzer-shim@sha256:84953ef2010455d580634d850a20445e2f03cfe8c1d2726b2d321d537cc0354a",
+      "port": 9300,
+      "env": {
+        "FW_SHIM_TARGET": "whisper",
+        "FW_SHIM_TARGET_URL": "http://whisper:9000/asr"
+      },
+      "description": "Voice-note transcription via the openai-whisper ASR webservice sidecar, behind the fw-analyzer/1 shim.",
+      "publisher": "Forensic-Wace",
+      "homepage": "https://github.com/Forensic-Wace/AI-ForensicWace"
+    },
+    {
+      "manifest": {
+        "contract": "fw-analyzer/1",
+        "key": "tesseract_ocr",
+        "name": "Tesseract image OCR (shim)",
+        "version": "1.0.0",
+        "capabilities": ["ocr"],
+        "input": "image",
+        "config_schema": {
+          "type": "object",
+          "properties": {
+            "languages": { "type": "array", "items": { "type": "string" }, "default": ["eng"] }
+          }
+        },
+        "trust": "local"
+      },
+      "image": "ghcr.io/forensic-wace/forensicwace-analyzer-shim@sha256:84953ef2010455d580634d850a20445e2f03cfe8c1d2726b2d321d537cc0354a",
+      "port": 9300,
+      "env": {
+        "FW_SHIM_TARGET": "tesseract",
+        "FW_SHIM_TARGET_URL": "http://tesseract:8884/tesseract"
+      },
+      "description": "Text extraction from chat images via the tesseract-server sidecar, behind the fw-analyzer/1 shim.",
+      "publisher": "Forensic-Wace",
+      "homepage": "https://github.com/Forensic-Wace/AI-ForensicWace"
+    },
+    {
+      "manifest": {
+        "contract": "fw-analyzer/1",
+        "key": "lavis_caption",
+        "name": "LAVIS image captioning (shim)",
+        "version": "1.0.0",
+        "capabilities": ["caption"],
+        "input": "image",
+        "resources": { "cpu": "2", "memory": "6Gi", "gpu": true },
+        "trust": "local"
+      },
+      "image": "ghcr.io/forensic-wace/forensicwace-analyzer-shim@sha256:84953ef2010455d580634d850a20445e2f03cfe8c1d2726b2d321d537cc0354a",
+      "port": 9300,
+      "env": {
+        "FW_SHIM_TARGET": "lavis",
+        "FW_SHIM_TARGET_URL": "http://lavis:5000/caption"
+      },
+      "description": "Image caption generation via the LAVIS sidecar, behind the fw-analyzer/1 shim.",
+      "publisher": "Forensic-Wace",
+      "homepage": "https://github.com/Forensic-Wace/AI-ForensicWace"
+    }
+  ]
+}

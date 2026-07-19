@@ -72,6 +72,21 @@ class Settings(BaseSettings):
     def oidc_enabled(self) -> bool:
         return bool(self.oidc_issuer and self.oidc_client_id and not self.auth_disabled)
 
+    # --- Analyzer marketplace (catalog + provisioning) ----------------------
+    # Catalog of installable analyzers: a fw-catalog/1 JSON document, reached
+    # over http(s):// or file://. Unset = marketplace browsing disabled.
+    # When a public key is set (base64 raw Ed25519), the detached signature
+    # at <catalog_url>.sig is REQUIRED and must verify.
+    catalog_url: Optional[str] = None
+    catalog_public_key: Optional[str] = None
+    # Runtime provisioner for installed analyzers: "kubernetes" (Deployment +
+    # Service + NetworkPolicy per analyzer, scale-to-zero) or "docker"
+    # (compose labs only — requires the docker socket, off by default).
+    provisioner: Optional[str] = None
+    provisioner_namespace: Optional[str] = None  # default: the pod's namespace
+    provisioner_idle_minutes: int = 15  # scale-to-zero after this idle time
+    provisioner_docker_network: Optional[str] = None  # docker: network to join
+
     # --- Results database (PostgreSQL) ------------------------------------
     database_url: Optional[str] = None
 

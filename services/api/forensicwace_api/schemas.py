@@ -104,11 +104,50 @@ class AnalyzerRegister(BaseModel):
     endpoint: str = Field(min_length=1, description="Base URL of a fw-analyzer/1 container")
     config: dict = {}
     enabled: bool = True
+    # required true when the container's manifest declares trust=cloud
+    consent: bool = False
 
 
 class AnalyzerUpdate(BaseModel):
     enabled: bool | None = None
     config: dict | None = None
+
+
+class CatalogEntryOut(BaseModel):
+    key: str
+    name: str
+    version: str
+    capabilities: list[str]
+    input: str
+    trust: str  # local | cloud
+    gpu: bool = False
+    config_schema: dict = {}
+    image: str
+    image_digest: str
+    port: int
+    description: str = ""
+    publisher: str = ""
+    homepage: str = ""
+    installed: bool = False
+    installed_version: str | None = None
+
+
+class CatalogOut(BaseModel):
+    name: str = ""
+    # signature verified against the pinned FW_CATALOG_PUBLIC_KEY
+    verified: bool = False
+    # a runtime provisioner is configured: installs need no manual endpoint
+    provisioner: bool = False
+    entries: list[CatalogEntryOut] = []
+
+
+class MarketplaceInstall(BaseModel):
+    """Install request. ``endpoint`` is required when no provisioner is
+    configured; ``consent`` must be true for trust=cloud analyzers."""
+
+    endpoint: str | None = None
+    config: dict = {}
+    consent: bool = False
 
 
 class PrivateChatOut(BaseModel):

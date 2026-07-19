@@ -66,9 +66,20 @@ def register_analyzer(request: AnalyzerRegister, admin: AuthUser = Depends(requi
         raise HTTPException(status_code=502, detail=f"Cannot fetch {request.endpoint}/manifest: {exc}")
     except ValidationError as exc:
         raise HTTPException(status_code=422, detail=f"Manifest does not conform to fw-analyzer/1: {exc}")
+    except ValueError:
+        raise HTTPException(status_code=422, detail=f"{request.endpoint}/manifest did not return valid JSON")
 
     if manifest.key in registry.BUILTINS:
         raise HTTPException(status_code=409, detail=f"{manifest.key!r} is a builtin analyzer key")
+    # same consent rule as marketplace installs: no silent evidence egress
+    if manifest.trust == "cloud" and not request.consent:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"{manifest.key!r} declares trust=cloud: evidence content will be sent to an "
+                "external service. Registering it requires explicit consent (consent=true)."
+            ),
+        )
 
     now = datetime.now(timezone.utc)
     with session_scope() as session:
@@ -92,6 +103,9 @@ def register_analyzer(request: AnalyzerRegister, admin: AuthUser = Depends(requi
         session.flush()
         out = _to_out(registry.resolved_from_row(row))
     registry.clear_registry_cache()
+    if manifest.trust == "cloud":
+        audit.record(admin, "analyzer.consent", resource=manifest.key,
+                     detail="trust=cloud: evidence egress approved")
     audit.record(admin, "analyzer.registered", resource=manifest.key,
                  detail=f"endpoint={request.endpoint} version={manifest.version} trust={manifest.trust}")
     return out
@@ -117,7 +131,8 @@ def update_analyzer(key: str, request: AnalyzerUpdate, admin: AuthUser = Depends
 
 @router.delete("/{key}", status_code=204)
 def uninstall_analyzer(key: str, admin: AuthUser = Depends(require_admin)):
-    """Remove a runtime-installed analyzer. Built-ins can only be disabled."""
+    """Remove a runtime-installed analyzer (and its provisioned runtime, if
+    any). Built-ins can only be disabled."""
     with session_scope() as session:
         row = session.query(Analyzer).filter_by(key=key).first()
         if row is None:
@@ -126,4 +141,20 @@ def uninstall_analyzer(key: str, admin: AuthUser = Depends(require_admin)):
             raise HTTPException(status_code=409, detail="Built-in analyzers cannot be uninstalled — disable instead")
         session.delete(row)
     registry.clear_registry_cache()
+    _deprovision_runtime(key)
     audit.record(admin, "analyzer.uninstalled", resource=key)
+
+
+def _deprovision_runtime(key: str) -> None:
+    """Best-effort teardown of a provisioned runtime; a BYO endpoint simply
+    has none and is skipped by the backend."""
+    from forensicwace_core.config import get_settings
+
+    if not get_settings().provisioner:
+        return
+    try:
+        from .. import provisioner
+
+        provisioner.deprovision(key)
+    except Exception:
+        logger.warning("Could not deprovision runtime for %s", key, exc_info=True)
