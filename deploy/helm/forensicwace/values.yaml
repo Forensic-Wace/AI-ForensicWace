@@ -132,6 +132,11 @@ rabbitmq:
 marketplace:
   catalogUrl: ""       # e.g. https://example.org/catalog.json (empty = disabled)
   catalogPublicKey: "" # base64 Ed25519 (tools/sign_catalog.py); empty = catalog shown as unverified
+  # Phase C: provision installed analyzers as Deployments in this namespace
+  # (scale-to-zero when idle). Adds a namespace-scoped Role to the api pod.
+  provisioner:
+    enabled: false
+    idleMinutes: 15
 
 auth:
   jwtSecret: forensicwace-lab-secret-change-me-please

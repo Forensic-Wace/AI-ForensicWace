@@ -1,0 +1,46 @@
+{{- if .Values.marketplace.provisioner.enabled }}
+# Analyzer provisioner (marketplace phase C): the API creates one Deployment +
+# Service (+ NetworkPolicy for trust=local) per installed analyzer and scales
+# them 0/1. Namespace-scoped Role — never a ClusterRole.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "fw.fullname" . }}-api
+  labels:
+    {{- include "fw.labels" . | nindent 4 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "fw.fullname" . }}-provisioner
+  labels:
+    {{- include "fw.labels" . | nindent 4 }}
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["create", "get", "list", "patch", "replace", "delete"]
+  - apiGroups: ["apps"]
+    resources: ["deployments/scale"]
+    verbs: ["patch"]
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["create", "get", "list", "patch", "replace", "delete"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["networkpolicies"]
+    verbs: ["create", "get", "list", "patch", "replace", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "fw.fullname" . }}-provisioner
+  labels:
+    {{- include "fw.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "fw.fullname" . }}-provisioner
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "fw.fullname" . }}-api
+    namespace: {{ .Release.Namespace }}
+{{- end }}

@@ -106,9 +106,15 @@ services:
       # Pin FW_CATALOG_PUBLIC_KEY to require a valid signature (production).
       FW_CATALOG_URL: ${FW_CATALOG_URL:-file:///catalog/catalog.json}
       FW_CATALOG_PUBLIC_KEY: ${FW_CATALOG_PUBLIC_KEY:-}
+      # Phase C docker provisioner — OPT-IN ONLY: mounting docker.sock is
+      # host-root equivalent. Uncomment here AND the socket volume below,
+      # and install the extra ('pip install forensicwace-api[docker]').
+      # FW_PROVISIONER: docker
+      # FW_PROVISIONER_DOCKER_NETWORK: compose_default
     volumes:
       - ../../data:/data
       - ../../catalog:/catalog:ro
+      # - /var/run/docker.sock:/var/run/docker.sock  # docker provisioner only
     ports:
       - "8080:8080"
 

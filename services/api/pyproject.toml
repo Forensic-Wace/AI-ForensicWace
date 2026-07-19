@@ -18,6 +18,11 @@ dependencies = [
     #   pip install -e libs/forensicwace_core -e services/api
 ]
 
+[project.optional-dependencies]
+# analyzer runtime provisioning (marketplace phase C)
+k8s = ["kubernetes>=29"]
+docker = ["docker>=7"]
+
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"

@@ -83,6 +83,12 @@ def submit_analysis(request: AnalysisRequest, user: AuthUser = Depends(get_curre
         session.add(process)
         process_id = process.process_id
 
+    # scale-to-zero (phase C): wake provisioned analyzer runtimes 0→1 before
+    # the tasks hit the queue; workers retry while models warm up
+    from ..provisioner import ensure_running
+
+    ensure_running(registry.expand_aliases(request.analyzers))
+
     dispatch_analysis(process_id)
     audit.record(
         user, "analysis.submitted", resource=f"{request.platform}/{request.backup_id}",

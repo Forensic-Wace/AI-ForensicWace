@@ -23,6 +23,9 @@ spec:
         prometheus.io/port: "8080"
         prometheus.io/path: /metrics
     spec:
+      {{- if .Values.marketplace.provisioner.enabled }}
+      serviceAccountName: {{ include "fw.fullname" . }}-api
+      {{- end }}
       {{- with .Values.image.pullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
@@ -45,6 +48,14 @@ spec:
             {{- with .Values.marketplace.catalogPublicKey }}
             - name: FW_CATALOG_PUBLIC_KEY
               value: {{ . | quote }}
+            {{- end }}
+            {{- if .Values.marketplace.provisioner.enabled }}
+            - name: FW_PROVISIONER
+              value: kubernetes
+            - name: FW_PROVISIONER_NAMESPACE
+              value: {{ .Release.Namespace | quote }}
+            - name: FW_PROVISIONER_IDLE_MINUTES
+              value: {{ .Values.marketplace.provisioner.idleMinutes | quote }}
             {{- end }}
             {{- if .Values.auth.oidc.issuer }}
             - name: FW_OIDC_ISSUER

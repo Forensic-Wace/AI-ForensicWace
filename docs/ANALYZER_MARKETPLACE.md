@@ -1,6 +1,6 @@
 # Analyzer Marketplace — design & tracking
 
-**Status**: phase A complete (2026-07-11) — phases B and C not started
+**Status**: all phases complete — A (2026-07-11), B and C (2026-07-20)
 **Depends on**: phases 0–6 complete (see [ARCHITECTURE.md](ARCHITECTURE.md) §9)
 **Goal**: analyzers become *installable at runtime* — browsed from a catalog,
 registered in the database, run as containers provisioned on demand — instead
@@ -127,12 +127,12 @@ finding — reproducibility for court use is a first-class marketplace feature.
 Evidence content (messages, audio, images — PII by definition) flows into
 analyzer containers. Third-party analyzer = third-party code seeing evidence.
 
-- [ ] catalog entries signed (cosign); installs pinned to `sha256:` digests, never tags
-- [ ] default-deny **egress** NetworkPolicy on every `trust=local` analyzer
-- [ ] no evidence volume mounts into analyzer pods (payload-only input)
-- [ ] resource requests/limits from the manifest; non-root, read-only rootfs
-- [ ] `trust=cloud` analyzers require explicit per-analyzer operator consent in the UI
-- [ ] docker-socket provisioning (compose) stays **off by default** behind a flag — mounting `docker.sock` is effectively host root
+- [x] catalog entries signed (Ed25519 detached signature, `tools/sign_catalog.py`; verification REQUIRED once `FW_CATALOG_PUBLIC_KEY` is pinned); installs pinned to `sha256:` digests, never tags (rejected at the model level)
+- [x] default-deny **egress** NetworkPolicy on every `trust=local` analyzer (same-namespace + DNS only)
+- [x] no evidence volume mounts into analyzer pods (payload-only input; provisioner mounts only an emptyDir /tmp)
+- [x] resource requests/limits from the manifest; non-root, read-only rootfs, no privilege escalation, all capabilities dropped
+- [x] `trust=cloud` analyzers require explicit per-analyzer operator consent (422 without `consent=true`, recorded as `analyzer.consent` on the audit trail; the gate also holds when a live manifest *escalates* trust vs the catalog). The image digest is recorded as finding provenance **only for provisioned installs** — a bring-your-own endpoint is unverified software
+- [x] docker-socket provisioning (compose) stays **off by default** behind a flag — mounting `docker.sock` is effectively host root
 
 ## 6. Delivery phases
 
@@ -147,19 +147,19 @@ analyzer containers. Third-party analyzer = third-party code seeing evidence.
 - [x] finding provenance: `analyzer_version` + `analyzer_digest` on PII/password rows, surfaced in results API and UI
 - [x] tests: contract validation, MockTransport adapter roundtrip, alias/capability resolution, registry CRUD, full analysis with an external analyzer persisting provenance (21 new tests)
 
-### Phase B — catalog + marketplace UI
+### Phase B — catalog + marketplace UI ✅ *(shipped 2026-07-20)*
 
-- [ ] `catalog.json` format + signature verification; seed catalog with DeepPass, Whisper, Tesseract, LAVIS manifests
+- [x] `fw-catalog/1` format (`forensicwace_api/catalog.py`) + Ed25519 detached-signature verification (`FW_CATALOG_URL` / `FW_CATALOG_PUBLIC_KEY`, signing tool `tools/sign_catalog.py`); seed catalog in `catalog/` with the four shim-wrapped sidecars
 - [x] conform the four existing sidecars — done via `services/analyzer-shim`: one env-configured proxy image (`FW_SHIM_TARGET` = deeppass | whisper | tesseract | lavis) translating fw-analyzer/1 into each sidecar's native API; wired into the compose `analyzers-local` profile, registered at runtime through `POST /analyzers`
-- [ ] Marketplace page: browse catalog, install (→ registry), configure (render `config_schema`), uninstall, health badges
-- [ ] trust-tier consent UX (`local` vs `cloud` clearly separated)
+- [x] Marketplace page: browse catalog (verified badge, install state), install (provisioner or bring-your-own endpoint), configure (`config_schema` shown, JSON config), uninstall, enable/disable, register-by-endpoint; health stays on the status page
+- [x] trust-tier consent UX: `local — no egress` vs `cloud — evidence leaves` badges; cloud installs require an explicit consent checkbox (server-enforced 422, audited)
 
-### Phase C — orchestrated runtimes ("spawn all'evenienza")
+### Phase C — orchestrated runtimes ("spawn all'evenienza") ✅ *(shipped 2026-07-20)*
 
-- [ ] k8s provisioner: Deployment + Service + NetworkPolicy generated from the manifest at install time
-- [ ] scale-to-zero at **analysis granularity**: API scales required analyzers 0→1 *before* dispatching to the queue (it knows the requested list at submit); idle reaper returns them to 0 after N minutes
-- [ ] compose provisioner via docker socket, opt-in flag only
-- [ ] GPU scheduling (`nodeSelector`/tolerations from manifest `resources.gpu`)
+- [x] k8s provisioner (`forensicwace_api/provisioner.py`, `FW_PROVISIONER=kubernetes`): Deployment + Service + NetworkPolicy generated from the catalog manifest at install time; namespace-scoped RBAC in the Helm chart (`marketplace.provisioner.enabled`)
+- [x] scale-to-zero at **analysis granularity**: submit scales the requested analyzers 0→1 before dispatching to the queue; the idle reaper returns them to 0 after `FW_PROVISIONER_IDLE_MINUTES` without running/recent analyses
+- [x] compose provisioner via docker socket (`FW_PROVISIONER=docker` + `forensicwace-api[docker]`), opt-in flag only, documented but commented out in compose
+- [x] GPU scheduling: manifest `resources.gpu` becomes an `nvidia.com/gpu` limit on the Deployment
 
 ## 7. Rejected approaches
 

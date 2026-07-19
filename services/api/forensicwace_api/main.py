@@ -72,7 +72,15 @@ async def lifespan(app: FastAPI):
             ensure_bootstrap_admin()
         except Exception:
             logger.exception("Results database unavailable — analysis endpoints will fail until it is reachable")
+    if settings.provisioner:
+        from . import provisioner
+
+        provisioner.start_reaper()  # scale idle analyzer runtimes back to zero
     yield
+    if settings.provisioner:
+        from . import provisioner
+
+        provisioner.stop_reaper()
 
 
 def create_app() -> FastAPI:
